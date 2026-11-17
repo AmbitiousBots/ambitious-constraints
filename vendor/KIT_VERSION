@@ -1,3 +1,1 @@
-0.4.0, built before release from the ambitious-kit branch feat/interchange-and-pinned-runtime.
-Replace vendor/ambitious_kit, vendor/__main__.py and vendor/ambitious-install-0.4.0.mjs with the files of the
-kit-v0.4.0 release, and vendor/SHA256SUMS with that release's lines, before this module is released.
+0.4.0, the files of the kit-v0.4.0 release of ambitious-kit, verified against that release's SHA256SUMS.

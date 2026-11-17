@@ -5,8 +5,8 @@ This product includes software developed by Ambitious Corporation
 (https://ambitiousbots.com).
 
 This product includes ambitious_kit, licensed under the Apache License,
-Version 2.0. The copy under vendor/ is version 0.4.0, built from the
-ambitious-kit repository before that version was released.
+Version 2.0. The copy under vendor/ is the kit-v0.4.0 release of the
+ambitious-kit repository.
 
 The solver runtime is not part of this product or its releases. When a
 person asks for it, the kit installer downloads these packages from the
