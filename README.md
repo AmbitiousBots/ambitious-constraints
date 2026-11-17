@@ -1,133 +1,180 @@
-# ambitious-template
+# ambitious-constraints
 
-This repository is a GitHub template for a new [Ambitious](https://ambitiousbots.com) module. An Ambitious module is an open-source, single-purpose command-line tool with no user interface. A bot runs it on a Grok Bot computer, passes JSON in, and reads JSON out.
+Ambitious Constraints is a command-line decision checker for bots. A bot states a decision as a model: variables, the numbers it depends on, the evidence behind each number, and constraints that are definitions, facts, policies, assumptions, goals or desires. The module stores versions of that model in SQLite and answers questions about it: is there a plan that satisfies everything, which is best, and when there is none, which smallest sets of constraints cannot all hold and what is the least that has to be given up. It also compares scenarios and sweeps an assumption to find where the answer changes. Every command reads JSON and returns one JSON envelope. There is no user interface, document rendering, network access or AI key.
 
-This repository contains no module code. It contains the files you need to start: the module contract, skill templates, coding-agent guides, and the standard open-source files used by the existing public module repositories. You add the code by adopting [ambitious-kit](https://github.com/AmbitiousBots/ambitious-kit), which is the source of the contract, the shared helpers, the checks, and the installer.
+Solving uses CP-SAT from [OR-Tools](https://developers.google.com/optimization), which is a native package and cannot live inside the module's single file. It is an opt-in, hash-pinned runtime that the kit installer builds only when asked. Without it the module still stores and validates models, and each solving command says what is missing.
 
-The word "template" is used in three places, and they are not the same thing:
+Part of [Ambitious](https://ambitiousbots.com). The shared [module contract](MODULE_CONTRACT.md) defines the envelope, installation, database, the pinned runtime and how data crosses between modules.
 
-| Name | What it is |
-| --- | --- |
-| This GitHub template | This repository: a starting point for a new module. |
-| The kit's repo-template | The files `scripts/apply-template.mjs` copies from [ambitious-kit](https://github.com/AmbitiousBots/ambitious-kit/tree/main/repo-template) into a module repository. |
-| The Ambitious Bot template | The free bot's instructions, skills, routines, and module pins. It ships as `ambitious-template-<version>.tgz` on each [kit release](https://github.com/AmbitiousBots/ambitious-kit/releases). This GitHub template is not that archive, and it publishes no release assets of its own. |
+## Install
 
-## What a module is
-
-A module does one job and exposes it as commands. Every command prints one JSON envelope on stdout. A command that needs input reads JSON from stdin or from `--in`. Commands that take no input, including `selfcheck` and `commands`, still print the same envelope shape.
-
-The short envelope in rule 1 of the contract looks like this:
-
-```json
-{ "ok": true, "schemaVersion": 1, "module": "tasks", "command": "next", "data": {}, "errors": [], "meta": { "now": "2026-01-01T00:00:00.000Z", "seed": 7, "version": "0.1.0" } }
-```
-
-The ten rules, the shared error codes, the worked examples, and the release gates are in [MODULE_CONTRACT.md](MODULE_CONTRACT.md). That file is a verbatim copy of the contract published in ambitious-kit `kit-v0.2.7`. The kit remains the source of truth. In that copy, "this repository" and "the kit" mean ambitious-kit, so a proposed change to the contract belongs there. When you adopt a later kit release, replace this copy with the contract from that release.
-
-A module is built to run on a Grok Bot computer, and it runs the same way on any machine with the right runtime (Node 24 for a TypeScript module, Python 3.13 for a Python module). It keeps its data under `AMBITIOUS_HOME`, which defaults to `/workspace/ambitious` on a Grok Bot computer. It refuses every path under `/home/box/agent-data/`, the bot's private data directory.
-
-Existing public modules include [ambitious-tasks](https://github.com/AmbitiousBots/ambitious-tasks), [ambitious-records](https://github.com/AmbitiousBots/ambitious-records), [ambitious-contracts](https://github.com/AmbitiousBots/ambitious-contracts), [ambitious-compliance](https://github.com/AmbitiousBots/ambitious-compliance), [ambitious-audit](https://github.com/AmbitiousBots/ambitious-audit), and [ambitious-video](https://github.com/AmbitiousBots/ambitious-video). Use them as examples. Do not invent a different envelope, a different install layout, or a different `selfcheck`.
-
-## Start from this GitHub template
-
-1. On GitHub, use this repository as a GitHub template and create a new public repository named `ambitious-<<MODULE>>`, where `<<MODULE>>` is a short lowercase name such as `tasks` or `records`. You can also clone this repository and change the remote. Enable [private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/configuring-private-vulnerability-reporting-for-a-repository) on the new repository, so [SECURITY.md](SECURITY.md) and the [code of conduct](CODE_OF_CONDUCT.md) have a private form to point at.
-2. Fill in every `<<PLACEHOLDER>>` in the skill files listed under [Layout](#layout). Rename the example skill directories under `skills/` from `your-module-*` to `<<MODULE>>-for-bots` and, if you need a Page skill, `<<MODULE>>-page`.
-3. Update [NOTICE](NOTICE): change the first line to the new repository name, and put the copyright holder who owns this module in place of Ambitious Corporation if that is not you.
-4. Adopt the latest [ambitious-kit](https://github.com/AmbitiousBots/ambitious-kit) release, following [Start a module on the kit](https://github.com/AmbitiousBots/ambitious-kit#start-a-module-on-the-kit). That is the supported way to add code, checks, and the verification bar. In short, for a TypeScript module:
-   1. From a checkout of ambitious-kit, run `node scripts/apply-template.mjs <path-to-your-repo>`. It creates missing files and never overwrites a file that already exists. Add `--dry-run` to see the list without writing. Because this GitHub template already ships many of the same paths as the kit's repo-template, those files are left as they are. After the command runs, do the replacements in [Files to replace after you adopt the kit](#files-to-replace-after-you-adopt-the-kit).
-   2. Download the kit's `ambitious-kit`, `ambitious-lint`, and `ambitious-depcruise` `.tgz` files plus `SHA256SUMS` from that release, check them with `shasum -a 256 -c SHA256SUMS --ignore-missing`, and commit them under `vendor/`.
-   3. Add those packages as development dependencies and copy the remaining build files from [examples/hello](https://github.com/AmbitiousBots/ambitious-kit/tree/main/examples/hello), as the kit README describes.
-   4. Write the module in `src/`, add an entry to `verify/features.json` for each command, and run the checks the kit lists.
-5. If the kit release you adopted is newer than `kit-v0.2.7`, replace [MODULE_CONTRACT.md](MODULE_CONTRACT.md) with the contract from that release. Compare `.mise.toml`, `.gitignore` and `.standalone.json` with that release's repo-template as well, and take any updates you still want.
-
-For a Python module, apply the kit's repo-template the same way and follow the kit's [Python package](https://github.com/AmbitiousBots/ambitious-kit/tree/main/packages/kit-python).
-
-Do not start from a blank layout, and do not copy an unofficial fork of the kit. The contract requires a module repository to adopt a kit release before module code is merged, because the kit is what checks most of the rules.
-
-### Files to replace after you adopt the kit
-
-`apply-template.mjs` will not overwrite these. Replace them yourself so the repository describes your module, not this GitHub template:
-
-| File | What to do |
-| --- | --- |
-| `README.md` | Write a module README. The contract requires a table of every command marked `read` or `write`, and a table of the module's own error codes with the same columns as the contract's shared-code table. Existing modules such as [ambitious-tasks](https://github.com/AmbitiousBots/ambitious-tasks) show the shape. |
-| `AGENTS.md` | Rewrite it for this module. You can start from [repo-template/AGENTS.md](https://github.com/AmbitiousBots/ambitious-kit/blob/main/repo-template/AGENTS.md) and delete any section that is only about starting from this GitHub template. |
-| `CONTRIBUTING.md` | Rewrite it for this module. You can start from [repo-template/CONTRIBUTING.md](https://github.com/AmbitiousBots/ambitious-kit/blob/main/repo-template/CONTRIBUTING.md). |
-| `CHANGELOG.md` | Start the module's own changelog. Do not keep the entry that records this GitHub template. |
-| `NOTICE` | Keep Apache-2.0 attribution, with this module's repository name and the correct copyright holder. |
-| `skills/` | Finish every `<<PLACEHOLDER>>` and rename the example directories. Delete the Page skill directory if this module has no Page view. |
-
-Leave [LICENSE](LICENSE), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md) and the issue forms as they are unless a later kit release changes them.
-
-## Layout
-
-| Path | What it is |
-| --- | --- |
-| [MODULE_CONTRACT.md](MODULE_CONTRACT.md) | The module contract, copied from ambitious-kit `kit-v0.2.7`. |
-| [AGENTS.md](AGENTS.md) | Rules for coding agents that build or change a module. [CLAUDE.md](CLAUDE.md) points at this file. |
-| [skills/](skills/) | Skill templates the bot follows when it drives the module. See [skills/README.md](skills/README.md). |
-| [LICENSE](LICENSE) and [NOTICE](NOTICE) | Apache License 2.0, which every module must use (contract rule 10). |
-| [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md) | How to file issues, the Contributor Covenant, and private vulnerability reporting. |
-| [CHANGELOG.md](CHANGELOG.md) | Changes to this GitHub template. A module started from it keeps its own changelog. |
-| [.github/](.github/) | Issue and pull request templates. |
-| [.gitignore](.gitignore) | Ignores for the directories a module grows once you adopt the kit. |
-| [.mise.toml](.mise.toml) | Pinned Node, Python, and Java versions, matching the kit's repo-template at `kit-v0.2.7`. |
-| [.standalone.json](.standalone.json) | The documented runtime paths that the kit's standalone check is allowed to see. |
-| [.cursor/rules/agent-models.mdc](.cursor/rules/agent-models.mdc) | Model choices per agent role, as used in the existing public module repositories. |
-| `.markdownlint.json`, `.markdownlintignore`, `.markdown-link-check.json` | Config for the Markdown and link checks in [CONTRIBUTING.md](CONTRIBUTING.md). |
-
-After you adopt the kit, the repository also has the layout the contract and [AGENTS.md](AGENTS.md) describe: `src/cli/`, `src/domain/`, `src/db/`, and when needed `src/ai/`; `migrations/`; `test/`; `spec/`; `verify/`; `vendor/`; and `scripts/`. A Python module follows the same ideas in the kit's Python package.
-
-## Install and test on a computer you control
-
-`AMBITIOUS_HOME` is the one directory where modules keep everything. When it is not set, it defaults to `/workspace/ambitious`, which is the right place on a Grok Bot computer. On any other machine, and in tests, set it to a directory of your choice.
-
-| Path | What lives there |
-| --- | --- |
-| `$AMBITIOUS_HOME/<module>/<module>.sqlite` | The module's SQLite database, unless `--db` names another file. |
-| `$AMBITIOUS_HOME/bin/` | Installed release files, a `SHA256SUMS` file with the verified checksum line for each installed asset, and a link named `ambitious-<module>` that points at the current one. |
-
-A module must refuse every path under `/home/box/agent-data/` with `E_FORBIDDEN_PATH`.
-
-### Test a build yourself
-
-Set `AMBITIOUS_HOME` to a fresh temporary directory, then run the built binary (a single `.mjs` or `.pyz` file) with Node 24 or Python 3.13. Start with `selfcheck` and `commands`. The contract tests and `verify/run` each use a fresh temporary `AMBITIOUS_HOME` as well. A run is repeatable when you pass back the `now` and `seed` values from `meta`.
-
-To install one exact release into `$AMBITIOUS_HOME/bin` on a computer you control, use the kit's single-module installer. Get `ambitious-install-<version>.mjs` and `SHA256SUMS` from the same [kit release](https://github.com/AmbitiousBots/ambitious-kit/releases) you adopted, and check the installer against that `SHA256SUMS` before you run it:
-
-```text
-node ambitious-install-0.2.7.mjs tasks 0.1.2 --from https://github.com/AmbitiousBots/ambitious-tasks/releases/download/tasks-v0.1.2
-```
-
-Replace `tasks`, `0.1.2` and the `--from` address with your module name, version, and release directory or release address. The installer checks the checksum in that release's `SHA256SUMS` so the downloaded file matches what the release published. That is a download-integrity check. It is not the pin chain an Ambitious Bot uses, which is described below. The installer writes the asset into `bin` and is safe to run again. It does not change any module database. Do not copy a binary into `bin` by hand.
-
-### What an Ambitious Bot installs
-
-An Ambitious Bot runs one command, described in the `ambitious-module-installer` skill that ships with the Ambitious Bot template:
+A release has three files: `ambitious-constraints-0.1.0.pyz`, `ambitious-constraints-0.1.0.runtime.txt` (the runtime lock) and `SHA256SUMS`. The module needs Python 3.13. The runtime needs `python3 -m venv` to work (on Debian that is the `python3-venv` package) and, the first time, access to the Python package index.
 
 ```sh
-node "${AMBITIOUS_HOME:-/workspace/ambitious}/bin/ambitious-modules" sync --json
+node ambitious-install-0.4.0.mjs constraints 0.1.0 --kind pyz --runtime --from <release address or directory>
+python3 "$AMBITIOUS_HOME/bin/ambitious-constraints" selfcheck
 ```
 
-`sync` installs, repairs, or upgrades every module pinned by that kit release, then runs each module's `selfcheck --json`. A file is installed only when its SHA-256 matches the pin inside the installer. The bot does not install a module that is not in that pin list, and it does not take a pin, an address, or a checksum from a request.
+The installer verifies the `.pyz` and the lock against `SHA256SUMS`, then builds a Python environment that holds exactly the locked packages under `$AMBITIOUS_HOME/constraints/runtime/<SHA-256 of the lock>/`. `pip` checks every downloaded file against the hashes in the lock. A failed or interrupted build leaves nothing in place, and running the installer again changes nothing. Leave out `--runtime` to install only the module. The runtime is about 200 MB on disk; the module itself is under 100 KB.
 
-The official pin list is [template/modules.lock.json](https://github.com/AmbitiousBots/ambitious-kit/blob/main/template/modules.lock.json) in ambitious-kit. How a maintainer changes a pin is documented in the [kit README](https://github.com/AmbitiousBots/ambitious-kit#the-ambitious-bot-template). This GitHub template does not add an intake process on top of that. A pin lives inside the installer that a kit release ships. You cannot edit it from this repository, and you should not try to edit it on a bot computer.
+`selfcheck` reports the runtime in `data.pinnedRuntime` (`state` is `ready`, `missing` or `damaged`) and says what to do in `data.warnings`. A missing runtime is a warning, not a problem: `selfcheck` stays `ok`.
 
-An Ambitious Bot gets a new pin only when its owner updates that bot's template to a kit release that includes the pin. Shipping a kit release is not enough on its own, because the installer never updates itself.
+`AMBITIOUS_HOME` defaults to `/workspace/ambitious`, the module storage directory on a Grok Bot computer. The database is `$AMBITIOUS_HOME/constraints/constraints.sqlite`; `--db` overrides that file. Modules refuse `/home/box/agent-data`, the bot's private data directory.
 
-Until a kit release pins your module, you and anyone else can still run it with `AMBITIOUS_HOME` set, or install one exact release with `ambitious-install` on a computer you control, as shown above. The Ambitious Bot's own skill tells the bot to run `sync` and not to install modules by hand, so do not use `ambitious-install` as a substitute for `sync` on a bot that already follows that skill.
+### From a checkout, on a computer with no root access
 
-## Publish
+This is the whole procedure on Debian 13 with the distribution's Python 3.13 and Node 24. Nothing is installed outside the checkout and `AMBITIOUS_HOME`.
 
-1. Pass every gate in Part 4 of [MODULE_CONTRACT.md](MODULE_CONTRACT.md). Do not weaken or skip a check to make it pass.
-2. Keep the repository public and licensed Apache-2.0, with [LICENSE](LICENSE) and [NOTICE](NOTICE) at the root.
-3. Create a GitHub release tagged `<<MODULE>>-v<<VERSION>>`, for example `tasks-v0.3.1`. Attach exactly the files the contract requires: `ambitious-<<MODULE>>-<<VERSION>>.mjs` (or `.pyz` for Python) and `SHA256SUMS` in `sha256sum` format.
-4. Leave the skills in this repository named without the `ambitious-` prefix. If a later kit release copies a skill into the Ambitious Bot template, that process adds the prefix and a `Template version` line. That copy step is part of pinning the module in the kit; it does not happen for a module the kit has not pinned.
+```sh
+git clone https://github.com/AmbitiousBots/ambitious-constraints.git && cd ambitious-constraints
+export AMBITIOUS_HOME="$HOME/ambitious"
+node scripts/runtime.mjs "$AMBITIOUS_HOME"
+python3 "$AMBITIOUS_HOME/bin/ambitious-constraints" selfcheck
+```
 
-See contract rule 5 for the asset names, the checksum file, and how the single-module installer behaves, and rule 9 for version numbers and `schemaVersion`.
+`scripts/runtime.mjs` builds the release files into `dist/` and runs the kit installer from `vendor/` with `--runtime`, exactly as above. To run the tests there:
 
-## Contributing
+```sh
+node scripts/runtime.mjs
+node scripts/py.mjs -m unittest discover -s tests -t .
+node scripts/py.mjs -m ambitious_kit.contract dist/ambitious-constraints.pyz
+node verify/run --only contract --only install-and-decide --only without-the-runtime --only write-rules --only analysis --only pricing-regression --only planning-regression --only checked-against-brute-force --only time-slots --only interchange-schemas
+```
 
-[CONTRIBUTING.md](CONTRIBUTING.md) says how to file an issue, set up a checkout, run the checks, and open a pull request. Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md). Report a security vulnerability privately, as [SECURITY.md](SECURITY.md) describes, not in an issue.
+The first line installs the runtime into `.build/home`, where the tests look for it. The tests use only the standard library. `node verify/run` with no arguments also checks the TLA+ models, which needs the Java pinned in `.mise.toml`.
 
-Part of [Ambitious](https://ambitiousbots.com). Licensed under the Apache License, Version 2.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+## JSON interface
+
+```text
+ambitious-constraints <command> [--in input.json] [--db constraints.sqlite] [--now ISO8601] [--seed integer] [--json]
+```
+
+Pass one JSON object on stdin or with `--in`, never both. Every response is one line, `{ ok, schemaVersion, module, command, data, errors, meta }`. Successful commands exit 0, caller errors exit 1, database and internal failures exit 2.
+
+| Command | Access | Needs the runtime | Input | Result in `data` |
+|---|---|---|---|---|
+| `commands` | none | no | none | `commands` with names, access and input requirements |
+| `selfcheck` | write | no | none | runtime, binary SHA-256, database integrity, applied migrations, `problems`, `pinnedRuntime`, `warnings` |
+| `model validate` | none | no | `{model}` | `valid`, `digest`, `problems`, `counts` |
+| `model propose` | read | no | `{model, model_id?}` | the same report, plus `base_version` (the stored version, 0 when new), `diff` against the stored version and `stored: false`. Nothing is written. |
+| `model commit` | write | no | `{model_id, base_version, digest, model, idem_key, actor}` | `model_id`, `version`, `digest`, `replayed` |
+| `model clone` | write | no | `{model_id, version?, new_id, idem_key, actor}` | `model_id` (the new one), `version: 1`, `digest`, `forked_from`, `replayed` |
+| `model get` | read | no | `{model_id, version?}` | `model`, `version`, `latest_version`, `digest`, `forked_from`, `actor`, `at` |
+| `model history` | read | no | `{model_id}` | ordered `events` |
+| `model list` | read | no | none | `models` |
+| `solve` | read | yes | `{model_id, version?}` or `{model}`, with `scenario?`, `limits?` | `solution`, a `constraint-solution.v1` document |
+| `explain` | read | yes | the same, with `max_sets?: 20`, `max_depth?: 6` | `status`, `mus`, `mcs`, `levers`, `rests_on_assumptions`, `complete`, `structural_conflict` |
+| `whatif` | read | yes | `{model_id \| model, scenarios: [name \| {name, overrides}], base?: true, limits?}` | `scenarios`, one solution per scenario in `results`, and `differences`: the variables whose values differ |
+| `sweep` | read | yes | `{model_id \| model, scenario?, param, grid: [integers], limits?}` | `points` with status, objective and values, and `flips`: where feasibility changes |
+| `run record` | write | no | `{envelope, idem_key, actor, note?}` | `run_id`, `recorded`, `at`, `replayed` |
+| `run get` | read | no | `{run_id}` | the stored `envelope` and its summary |
+| `run list` | read | no | `{model_id?}` | `runs` |
+
+Reads open SQLite read-only and cannot create or migrate a database: run `selfcheck` first if a read reports `E_MIGRATION`. The analysis commands are reads even with a stored `model_id`. To keep a result, pass the whole envelope a command printed to `run record`.
+
+`limits` is `{ "deterministic_time": 10 }`, a whole number from 1 to 600. It is the solver's own deterministic work measure, not seconds; on a laptop one unit is on the order of a second.
+
+### Writing follows three rules
+
+- **A proposal writes nothing.** `model propose` returns the `digest` of the model, the `base_version` it was compared with, and the difference. Show that to the person.
+- **A commit changes one model, from one version.** `model commit` names the `model_id`, the `base_version` the proposal reported and the `digest`. It stores version `base_version + 1`. If the model moved on in the meantime the commit fails with `E_STALE` and stores nothing; if the model sent is not the one proposed it fails with `E_DIGEST`.
+- **A copy is always explicit.** `model clone` copies one version to a new id and records `forked_from`. No write ever creates a branch on its own.
+
+Every write takes an `idem_key`. Repeating a request with the same key returns the first answer with `replayed: true` and changes nothing; a different request under a used key fails with `E_IDEM_CONFLICT`. Stored model versions, the event history and recorded runs cannot be updated or deleted: the database refuses it.
+
+## The model
+
+A model is a [`constraint-model.v1`](src/ambitious_constraints/schemas/constraint-model.v1.json) document, one of the interchange schemas the kit publishes. [`tests/fixtures/two-offers.json`](tests/fixtures/two-offers.json) is a small complete one.
+
+Every number is an integer. Scale a quantity that has a fraction (cents, hundredths of an hour) and say so in the parameter's `scale` or `unit`.
+
+- **Variables.** `bool`; `int` with a domain of `{lo, hi}`, `{values: [...]}` or `{ranges: [[lo, hi], ...]}`; `enum` with `{values: [names]}`; `interval` with `{start, size, end, present?}`, where `start` and `end` name `int` variables and `present` is a literal that says whether the interval exists.
+- **Literals.** `x`, `!x`, `mode=fast`, `!mode=fast`.
+- **Parameters.** Named integers. Anywhere a number is expected, `"param:name"` or `"-param:name"` stands for the parameter's value, so a scenario or a sweep can change it in one place.
+- **Constraints.** Each has an `id`, a `kind`, `args`, and a `strength`:
+  - `structural`: a definition. Always enforced, never part of a conflict.
+  - `hard`: must hold. It can appear in a conflict set.
+  - `soft`: may be broken at a cost of `weight` in the objective.
+- **Category and levers.** `category` is `desire`, `goal`, `policy`, `fact`, `assumption` or `definition`. The levers, the constraints `explain` will propose to give up, are the hard constraints with category `desire` or `goal` that are not marked `negotiable: false`. Facts, policies and assumptions are never offered for removal.
+- **Evidence.** Each entry targets a constraint or a parameter and states its `source` and its `confidence`: `sourced`, `derived` (name the `inputs`) or `assumption`. A fact, assumption or parameter with no evidence is reported by `model validate` as a warning and treated as an assumption.
+- **Objective.** `{sense: "max" | "min", terms: [{coef, var}]}` or `null`. Soft penalties are subtracted from a maximum and added to a minimum.
+- **Scenarios.** Named `overrides`: `disable` ids, set `params`, `soften` ids to a weight, `harden` ids, `add` constraints.
+- **Hints.** `{variable: value}`, a starting assignment. The solver tries it first, so a hinted feasible plan is never made worse.
+
+| Kind | `args` | Notes |
+|---|---|---|
+| `linear` | `{terms: [[coef, var], ...], op: "<=" \| ">=" \| "==" \| "!=", rhs, if?: [literals]}` | A term's variable is an `int`, a `bool` or `name=value`. |
+| `implication` | `{if: [literals], then: [literals], all?: false}` | When every `if` literal holds, one `then` literal holds, or all of them with `all: true`. |
+| `exactly_one`, `at_most_one` | `{lits: [literals], if?}` | |
+| `fix` | `{lit}` or `{var, value}` | |
+| `product` | `{target, factors: [a, b]}` | Structural only. |
+| `element` | `{index, values: [numbers], target}` | `target` is `values[index]`. Structural only. |
+| `precedence` | `{before, after, gap?: 0, if?}` | The interval `before` ends, plus `gap`, no later than `after` starts. |
+| `no_overlap` | `{intervals: [names]}` | Structural only. Intervals of size 0 are refused. |
+| `cumulative` | `{intervals, demands: [numbers], capacity}` | Structural only. |
+
+Any kind may give `args` as `{rows: [...]}` to group several rows under one id, so they stand or fall together in a conflict set; a row may name its own `kind`.
+
+A model may have at most 20,000 variables, 50,000 constraints and 200,000 rows. `model validate` reports a larger one as a problem.
+
+### Placing blocks of time
+
+Use minutes (or any whole unit) from the start of the horizon. Give each block an `interval` with a fixed `size`, put the blocks of one calendar in one `no_overlap`, order dependent blocks with `precedence`, and bound them with a `makespan` variable (`end - makespan <= 0`, minimize `makespan`). There are two ways to say when work may happen, and they give the same answers:
+
+- as the start variable's `ranges`, one `[first start, last start]` pair per free window; or
+- as fixed intervals for the closed hours (a start variable whose domain is a single value), added to the calendar's `no_overlap`.
+
+With many windows the second is far faster: a plan of about 600 blocks over 600 days solved in about 5 seconds with blocking intervals and took over a minute with range domains, because the solver's preparation step is slow on variables with hundreds of ranges. Pass the schedule you already have as `hints`.
+
+## What the answers mean
+
+`solve` returns [`constraint-solution.v1`](src/ambitious_constraints/schemas/constraint-solution.v1.json):
+
+- `status` is what was proved. `optimal`: no better plan exists. `feasible`: a plan, but the search stopped at its limit, so a better one may exist; `bound` is the best the objective could still be. `infeasible`: no plan exists. `unknown`: the limit was reached first. Never report `feasible` as the best plan.
+- `values` holds every variable: booleans as `true`/`false`, enums by name.
+- `soft_violated` lists the soft constraints the plan gives up, with their weights.
+- `checked.violations` comes from a second implementation that does not use the solver: it re-evaluates every constraint on the returned values and recomputes the objective. It is empty unless the solver and the checker disagree, which is a bug to report.
+- `rests_on_assumptions` lists the hard and soft constraints whose own evidence, or the evidence of a parameter they use, is an assumption or is missing. A result with a non-empty list holds only as far as those assumptions do. Say so whenever you relay it.
+- `solver` records the solver version, the seed it used, the single worker, the limit and the SHA-256 of the runtime lock.
+
+`explain` works on the hard constraints:
+
+- `mus`: minimal conflict sets. Each is a set of hard constraints that cannot all hold, and removing any one member makes the rest satisfiable. Each member carries its `label`, `category`, whether it is a `lever`, its strongest evidence `confidence` and whether it `rests_on_assumption`.
+- `mcs`: minimal correction sets, smallest first. Each is a set of levers whose removal makes the model feasible, and no smaller part of it does.
+- `complete` is `false` when `max_sets` or `max_depth` stopped the search early, so more sets may exist. `structural_conflict` is `true` when the definitions alone contradict each other.
+- When a subproblem cannot be decided within the limit, `explain` and `sweep` fail with `E_LIMIT` instead of guessing.
+
+## Determinism
+
+The solver runs with one worker, a seed derived from `--seed`, and a deterministic work limit; it is never given a clock limit. Variables and constraints are built in sorted order, and nothing in a result comes from the clock: `--now` is used only as the time of a write. The same binary, runtime, database state, input and `--seed` print the same bytes, on any day. The tests check this for every analysis command.
+
+## Error codes
+
+Shared codes are in the [module contract](MODULE_CONTRACT.md). `E_RUNTIME` (exit 1) is the shared code for a solving command run without the pinned runtime. The module's own:
+
+| Code | Exit | Meaning | Typical hint |
+|---|---|---|---|
+| `E_MODEL` | 1 | The model matches the schema but has problems: an unknown variable or parameter, a kind that can only be structural, a duplicate id. `data.problems` lists every one. | Run `model validate` and fix each problem with severity `error`. |
+| `E_STALE` | 1 | `model commit` named a `base_version` that is no longer the stored version. Nothing was stored. | Propose against the current version, show the difference, commit with the new `base_version`. |
+| `E_DIGEST` | 1 | The model sent to `model commit` is not the one whose digest was given. | Commit exactly the model that `model propose` showed. |
+| `E_IDEM_CONFLICT` | 1 | The `idem_key` was already used for a different request. | Retry with exactly the first request, or use a new key for a new action. |
+| `E_EXISTS` | 1 | `model clone` named a `new_id` that is already a model. | Choose an id that is not in use. |
+| `E_NOT_FOUND` | 1 | The model, version, scenario, parameter or run does not exist. | Use `model list`, `model history` or `run list`. |
+| `E_LIMIT` | 1 | The solver could not decide within `limits.deterministic_time`. | Raise the limit or make the model smaller. |
+
+## Examples and regression data
+
+- [`examples/pricing`](examples/pricing) builds a pricing model as data: a price table and a demand table (`element`), revenue (`product`), two capacity limits and an objective. `node scripts/py.mjs examples/pricing/build_model.py --mode profit` prints a `solve` input. The tests reproduce the 288 optimal plans, the 5% price ranges, 616 fixed-price points and 12 break-even searches that an earlier prototype recorded with the same solver version.
+- [`tests/fixtures/planning-regression.json`](tests/fixtures/planning-regression.json) is that prototype's planning model with neutral identifiers, and the results it recorded for 11 scenarios. The tests reproduce every status and optimum and the same correction sets, and confirm every recorded conflict set is minimal.
+
+## Verification
+
+```text
+mise trust && mise install
+python3 -m pip install --require-hashes --only-binary :all: -r scripts/dev-requirements.txt
+npm run release:check
+```
+
+`release:check` runs the type check (mypy strict), the lint rules including the comment ban, the tests, the kit's contract tests on the built `.pyz`, the TLA+ models and `verify/run`. [`spec/ModelCommit.tla`](spec/ModelCommit.tla) models propose, commit, replay and clone with two writers; three broken copies show that the model catches a commit that ignores `base_version`, a commit that ignores the digest, and a clone that copies the wrong version.
+
+Licensed under the Apache License, Version 2.0; see [LICENSE](LICENSE) and [NOTICE](NOTICE). The runtime packages are downloaded by the installer and are not part of this repository or its releases; `NOTICE` lists them and their licenses.

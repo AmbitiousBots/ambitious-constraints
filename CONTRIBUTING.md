@@ -1,8 +1,6 @@
 # Contributing
 
-Thank you for helping. This repository is a GitHub template for an [Ambitious](https://ambitiousbots.com) module: an open-source, single-purpose command-line tool with no user interface. A bot runs it, passes JSON in and reads JSON out. The rules every module follows are in [MODULE_CONTRACT.md](MODULE_CONTRACT.md), a copy of the contract in the [ambitious-kit](https://github.com/AmbitiousBots/ambitious-kit) repository. In that copy, "this repository" means ambitious-kit. [AGENTS.md](AGENTS.md) describes how to start a module from this GitHub template and how a module repository is laid out.
-
-This GitHub template is not the Ambitious Bot template, which ships as `ambitious-template-<version>.tgz` on a kit release.
+Thank you for helping. This repository is an [Ambitious](https://ambitiousbots.com) module: an open-source, single-purpose command-line tool with no user interface. A bot runs it, passes JSON in and reads JSON out. The rules every module follows are in `MODULE_CONTRACT.md` in the [ambitious-kit](https://github.com/AmbitiousBots/ambitious-kit) repository, and [AGENTS.md](AGENTS.md) describes how this repository is laid out.
 
 Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
 
@@ -11,7 +9,6 @@ Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md).
 - A bug: open an issue with the bug report form. Give the exact command, its input, everything it printed, and the versions the form asks for.
 - An idea: open an issue with the feature request form before you write much code, so the approach can be agreed first.
 - A security vulnerability: do not open an issue. Follow [SECURITY.md](SECURITY.md).
-- A change to the module contract itself: open the issue or pull request on [ambitious-kit](https://github.com/AmbitiousBots/ambitious-kit), which is the source of the contract.
 
 Replace real keys, passwords and personal data with made-up values in anything you post.
 
@@ -20,45 +17,43 @@ Replace real keys, passwords and personal data with made-up values in anything y
 You need two tools:
 
 - [git](https://git-scm.com).
-- [mise](https://mise.jdx.dev), a tool-version manager. It installs the exact Node, Python and Java versions pinned in `.mise.toml`, so you do not install those yourself. Node runs TypeScript modules and the checks, Python is for modules written in Python, and Java runs TLC, the TLA+ model checker.
+- [mise](https://mise.jdx.dev), a tool-version manager. It installs the exact Node, Python and Java versions pinned in `.mise.toml`, so you do not install those yourself. Node runs the code and the checks, Python is for modules written in Python, and Java runs TLC, the TLA+ model checker.
 
 Then, in your clone:
 
 ```text
 mise trust && mise install
+python3 -m pip install --require-hashes --only-binary :all: -r scripts/dev-requirements.txt
+npm run runtime
 ```
 
-This GitHub template ships with no module code and no `package-lock.json`. After you adopt a kit release, as [README.md](README.md) describes, run `npm ci` to install the packages pinned in `package-lock.json`.
-
-If you created the repository from this GitHub template, enable [private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/configuring-private-vulnerability-reporting-for-a-repository) so [SECURITY.md](SECURITY.md) has a private form to point at. Do not mark a module repository as a GitHub template unless you intend it to be one.
+The second line installs the two lint tools, mypy and ruff, at pinned versions; use a virtual environment and set `PY` to its Python if you prefer. The third builds the module and installs it, with the pinned solver runtime, into `.build/home` through the kit installer in `vendor/`. It downloads the locked packages once. There is no `npm ci`: the repository has no Node dependencies.
 
 ## Run the checks
 
-This GitHub template is documentation, skills and standard files. Before you change those, run:
-
-```text
-npx markdownlint-cli '**/*.md' --config .markdownlint.json
-npx markdown-link-check --config .markdown-link-check.json README.md AGENTS.md CONTRIBUTING.md CHANGELOG.md SECURITY.md skills/README.md skills/*/SKILL.md
-```
-
-`MODULE_CONTRACT.md` and `CODE_OF_CONDUCT.md` are verbatim copies from ambitious-kit and are listed in `.markdownlintignore`. A placeholder such as `<<MODULE>>` is a fill-in marker, not a broken link.
-
-After you adopt the kit and add module code, run every check before you push. `package.json` lists them under `scripts`. A module has these from its first kit-adopted commit:
+Run every check before you push:
 
 | Command | What it checks |
-| --- | --- |
-| `npm run lint` | The lint rules, and that no tracked file contains an internal plan ID or a path on one person's machine. |
+|---|---|
+| `npm run typecheck` | mypy in strict mode on the module, the scripts and the examples. |
+| `npm run lint` | No code comments, the ruff rules (no clock, randomness, network or database access outside the directory that owns it), and that no tracked file contains an internal plan ID or a path on one person's machine. |
+| `npm run test` | The unit, property and regression tests. They solve with the runtime in `.build/home`. |
+| `npm run contract` | The kit's contract tests against the built `.pyz`, in a fresh home with no runtime. |
 | `npm run tlc` | Every TLA+ model in `spec/` passes the TLC model checker, and every deliberately broken copy in `spec/broken/` breaks the rule listed for it. |
 | `npm run verify` | `verify/run`: every feature in `verify/features.json`, each against a fresh temporary `AMBITIOUS_HOME` (the directory a module keeps its data in). |
 
-Also run `typecheck`, `depcruise`, `test`, `build` and `contract` with `npm run <name>` when `package.json` has them. A check that fails means the change is not ready. Fix the cause; never weaken or skip the check.
+`npm run release:check` runs them all in that order. A check that fails means the change is not ready. Fix the cause; never weaken or skip the check.
+
+A change to what a model or a solution looks like is a change to an interchange schema. Make it in [ambitious-kit](https://github.com/AmbitiousBots/ambitious-kit) first, then refresh the copies under `src/ambitious_constraints/schemas/` and their checksums in `tests/test_schemas.py`.
+
+To change the runtime lock, regenerate `src/ambitious_constraints/runtime.txt` with one exact version per package and the SHA-256 of every wheel for Python 3.13 on Linux x86-64, Linux arm64 and macOS arm64, re-run every regression test, and update `NOTICE`. A new lock is a new runtime directory, so existing installs are not touched.
 
 ## Open a pull request
 
 1. Fork the repository, or create a branch if you have write access. Keep one purpose per pull request.
 2. Make the smallest change that meets the goal. When behavior changes, change the tests with it, and add or update the entry in `verify/features.json` for anything a user can see.
 3. Write commit messages and the pull request in plain language. Everything in this repository is public, so write nothing that only makes sense inside one organisation: no private ticket numbers, no paths on your machine, no names of people or customers.
-4. Fill in every section of the pull request template: why, what changed, evidence, and the decisions you made on your own. For a change that is only documentation or skills, say so under evidence and paste the output of the Markdown and link checks above. After the module has `verify/run`, paste that output.
+4. Fill in every section of the pull request template: why, what changed, evidence (paste the output of `verify/run`), and the decisions you made on your own.
 5. A maintainer reviews the pull request and merges it once the checks pass.
 
 ## License

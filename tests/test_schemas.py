@@ -33,7 +33,9 @@ class InterchangeSchemas(unittest.TestCase):
             fixture("two-offers.json"),
             fixture("planning-regression.json")["model"],
             build_model.build(build_model.Case("lognorm_250", 1000, 22.5, 4.0, "profit")),
-            build_model.build(build_model.Case("linear_tools", 300, 15, 2.0, "revenue", floor_objective=10, price_direction="min")),
+            build_model.build(
+                build_model.Case("linear_tools", 300, 15, 2.0, "revenue", floor_objective=10, price_direction="min")
+            ),
             schedule_model(5, 2, 60, 1, hinted=True)[0],
         ]
         for model in models:
@@ -44,7 +46,9 @@ class InterchangeSchemas(unittest.TestCase):
         reference = {"name": "two-offers", "digest": "0" * 64}
         for scenario in (None, "more_hours", "full_is_a_wish"):
             solved = solution(fixture("two-offers.json"), reference, scenario, engine)
-            self.assertEqual(describe_schema_problems(schema_problems(schema("constraint-solution.v1.json"), solved)), "")
+            self.assertEqual(
+                describe_schema_problems(schema_problems(schema("constraint-solution.v1.json"), solved)), ""
+            )
             self.assertEqual(solved["schema"], "constraint-solution.v1")
 
 

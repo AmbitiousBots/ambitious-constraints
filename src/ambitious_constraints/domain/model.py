@@ -769,7 +769,11 @@ def apply_overrides(raw: Mapping[str, object], overrides: Mapping[str, object]) 
         model["evidence"] = [
             entry
             for entry in evidence
-            if not (isinstance(entry, dict) and isinstance(target := entry.get("target"), dict) and target.get("constraint") in off)
+            if not (
+                isinstance(entry, dict)
+                and isinstance(target := entry.get("target"), dict)
+                and target.get("constraint") in off
+            )
         ]
     model.pop("scenarios", None)
     return model

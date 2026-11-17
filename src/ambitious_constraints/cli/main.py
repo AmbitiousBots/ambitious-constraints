@@ -6,7 +6,15 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from importlib.resources import files
 
-from ambitious_kit.cli.command import Context, DbContext, no_input, pure_command, read_command, write_command
+from ambitious_kit.cli.command import (
+    Command,
+    Context,
+    DbContext,
+    no_input,
+    pure_command,
+    read_command,
+    write_command,
+)
 from ambitious_kit.cli.runner import ModuleSpec, run_cli
 from ambitious_kit.db.sqlite import load_migrations
 from ambitious_kit.domain.clock import format_instant
@@ -478,6 +486,19 @@ def run_list(context: DbContext[str | None]) -> JsonObject:
     return json_object({"runs": store.list_runs(context.db, context.input)})
 
 
+def _as_given(raw: object) -> object:
+    return raw
+
+
+def checked_read[Input](
+    run: Callable[[DbContext[Input]], JsonObject], parse_input: Callable[[object], Input]
+) -> Command:
+    def checked(context: DbContext[object]) -> JsonObject:
+        return run(DbContext(parse_input(context.input), context.now, context.rng, context.env, context.db))
+
+    return read_command(checked, _as_given)
+
+
 def spec() -> ModuleSpec:
     return ModuleSpec(
         module=MODULE,
@@ -486,19 +507,19 @@ def spec() -> ModuleSpec:
         migrations=load_migrations(PACKAGE / "migrations"),
         commands={
             "model validate": pure_command(validate, parse_validate),
-            "model propose": read_command(propose, parse_propose),
+            "model propose": checked_read(propose, parse_propose),
             "model commit": write_command(commit, parse_commit),
             "model clone": write_command(clone, parse_clone),
-            "model get": read_command(get, parse_lookup),
-            "model history": read_command(history, parse_model_id),
+            "model get": checked_read(get, parse_lookup),
+            "model history": checked_read(history, parse_model_id),
             "model list": read_command(list_models, no_input),
-            "solve": read_command(_analyse(_solve), parse_solve),
-            "explain": read_command(_analyse(_explain), parse_explain),
-            "whatif": read_command(_analyse(_whatif), parse_whatif),
-            "sweep": read_command(_analyse(_sweep), parse_sweep),
+            "solve": checked_read(_analyse(_solve), parse_solve),
+            "explain": checked_read(_analyse(_explain), parse_explain),
+            "whatif": checked_read(_analyse(_whatif), parse_whatif),
+            "sweep": checked_read(_analyse(_sweep), parse_sweep),
             "run record": write_command(run_record, parse_run_record),
-            "run get": read_command(run_get, parse_run_id),
-            "run list": read_command(run_list, parse_run_list),
+            "run get": checked_read(run_get, parse_run_id),
+            "run list": checked_read(run_list, parse_run_list),
         },
         runtime_lock=RUNTIME_LOCK,
     )

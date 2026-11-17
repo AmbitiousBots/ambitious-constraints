@@ -101,7 +101,9 @@ def build(case: Case) -> dict[str, object]:
         structural("paid_within_demand", "linear", {"terms": [[1, "n"], [-1, "d"]], "op": "<=", "rhs": 0}),
         structural("revenue", "product", {"target": "rev", "factors": ["price", "n"]}),
         structural("consult_price_table", "element", {"index": "ci", "values": CONSULT_PRICES, "target": "cp"}),
-        structural("consult_demand_table", "element", {"index": "ci", "values": table.consult_hundredths, "target": "hc"}),
+        structural(
+            "consult_demand_table", "element", {"index": "ci", "values": table.consult_hundredths, "target": "hc"}
+        ),
         structural("consult_ceiling", "product", {"target": "ccap", "factors": ["n", "hc"]}),
         structural("consult_within_ceiling", "linear", {"terms": [[1, "ch"], [-1, "ccap"]], "op": "<=", "rhs": 0}),
         structural("consult_revenue", "product", {"target": "crev", "factors": ["cp", "ch"]}),
@@ -154,7 +156,10 @@ def build(case: Case) -> dict[str, object]:
                 {"terms": [[coef, name] for coef, name in objective], "op": ">=", "rhs": case.floor_objective},
             )
         )
-    stated: dict[str, object] | None = {"sense": "max", "terms": [{"coef": coef, "var": name} for coef, name in objective]}
+    stated: dict[str, object] | None = {
+        "sense": "max",
+        "terms": [{"coef": coef, "var": name} for coef, name in objective],
+    }
     if case.price_direction is not None:
         stated = {"sense": case.price_direction, "terms": [{"coef": 1, "var": "price"}]}
     elif case.min_revenue is not None:
@@ -163,7 +168,7 @@ def build(case: Case) -> dict[str, object]:
     return {
         "schema": "constraint-model.v1",
         "name": f"pricing-{case.curve}-{case.free_users}-{case.review_min}-{case.conv}-{case.mode}",
-        "description": "Price of a reviewed tier and of a consulting surcharge, under an assumed willingness-to-pay curve.",
+        "description": "Price of a reviewed tier and of a consulting surcharge, under an assumed demand curve.",
         "variables": [
             integer("pi", len(PRICES) - 1, "Which price in the price table"),
             integer("price", max(PRICES), "Monthly price of the reviewed tier"),
@@ -178,13 +183,33 @@ def build(case: Case) -> dict[str, object]:
             integer("crev", most * top_hours * max(CONSULT_PRICES), "Consulting revenue per month, in cents"),
         ],
         "params": [
-            {"name": "owner_seconds", "value": owner_seconds, "unit": "seconds per month", "description": "Owner hours left after fixed work"},
-            {"name": "reviewer_seconds", "value": reviewer_seconds, "unit": "seconds per month", "description": "Reviewer hours left after free-account support"},
+            {
+                "name": "owner_seconds",
+                "value": owner_seconds,
+                "unit": "seconds per month",
+                "description": "Owner hours left after fixed work",
+            },
+            {
+                "name": "reviewer_seconds",
+                "value": reviewer_seconds,
+                "unit": "seconds per month",
+                "description": "Reviewer hours left after free-account support",
+            },
         ],
         "constraints": constraints,
         "evidence": [
-            {"target": {"param": "owner_seconds"}, "source": unsourced, "confidence": "assumption", "quote": "owner_cap_h minus owner_eng_h"},
-            {"target": {"param": "reviewer_seconds"}, "source": unsourced, "confidence": "assumption", "quote": "reviewer_cap_h minus free-account support"},
+            {
+                "target": {"param": "owner_seconds"},
+                "source": unsourced,
+                "confidence": "assumption",
+                "quote": "owner_cap_h minus owner_eng_h",
+            },
+            {
+                "target": {"param": "reviewer_seconds"},
+                "source": unsourced,
+                "confidence": "assumption",
+                "quote": "reviewer_cap_h minus free-account support",
+            },
             {
                 "target": {"constraint": "demand_table"},
                 "source": unsourced,

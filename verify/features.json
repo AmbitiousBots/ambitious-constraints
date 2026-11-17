@@ -6,7 +6,57 @@
   },
   {
     "id": "models",
-    "userVisible": "Every model of how the software behaves passes the model checker, and every deliberately broken copy is caught breaking the rule it was written to break.",
+    "userVisible": "Two writers who prepared a change against the same version cannot both store it, a commit stores exactly the model that was proposed, and a clone is exactly the version it names: the model of these rules passes the model checker, and every deliberately broken copy is caught.",
     "check": "node scripts/tlc.mjs"
+  },
+  {
+    "id": "contract",
+    "userVisible": "Every command answers the way every Ambitious module does: one JSON answer, fixed exit codes, repeatable output, no access to the bot's private data, and analysis that never changes data. This holds on a computer where the solver runtime was never installed.",
+    "check": "node scripts/py.mjs scripts/build.py && node scripts/py.mjs -m ambitious_kit.contract dist/ambitious-constraints.pyz"
+  },
+  {
+    "id": "install-and-decide",
+    "userVisible": "On a fresh computer the kit installer puts the module and its pinned solver runtime in place, selfcheck reports both as ready, and a bot can propose a model, commit it after approval, see the smallest set of goals that cannot all hold and the smallest thing to give up, solve a scenario, sweep an assumption, compare scenarios and record the run.",
+    "check": "node scripts/py.mjs verify/checks/story.py"
+  },
+  {
+    "id": "without-the-runtime",
+    "userVisible": "Without the solver runtime the module still checks itself, validates, proposes, commits, clones and shows models, and every solving command says in plain words that the runtime is missing and how to install it.",
+    "check": "node scripts/py.mjs scripts/build.py && node scripts/py.mjs -m unittest tests.test_cli.WithoutTheRuntime"
+  },
+  {
+    "id": "write-rules",
+    "userVisible": "A proposal stores nothing. A commit changes only the model it names, only from the version it was prepared against, and only the exact model that was proposed. A repeated request changes nothing, a copy is always an explicit clone with a new id that records where it came from, and stored history cannot be edited or deleted.",
+    "check": "node scripts/runtime.mjs && node scripts/py.mjs -m unittest tests.test_cli.WriteRules tests.migrations.test_0001_constraints"
+  },
+  {
+    "id": "analysis",
+    "userVisible": "Solving, explaining, comparing scenarios and sweeping an assumption give the expected answers on a small model, say which results rest on assumptions, and print the same bytes for the same input and seed on any day.",
+    "check": "node scripts/runtime.mjs && node scripts/py.mjs -m unittest tests.test_cli.Analysis tests.test_cli.Limits"
+  },
+  {
+    "id": "pricing-regression",
+    "userVisible": "The pricing study recorded with the prototype is reproduced: all 288 optimal plans, the price range within 5% of each optimum, 616 fixed-price points and the number of free accounts needed to reach the revenue target.",
+    "check": "node scripts/runtime.mjs && node scripts/py.mjs -m unittest tests.test_pricing"
+  },
+  {
+    "id": "planning-regression",
+    "userVisible": "The planning scenarios recorded with the prototype are reproduced: the same scenarios are infeasible, the feasible ones reach the same optimum, the same smallest correction sets are found, and every recorded conflict set is confirmed minimal.",
+    "check": "node scripts/runtime.mjs && node scripts/py.mjs -m unittest tests.test_planning"
+  },
+  {
+    "id": "checked-against-brute-force",
+    "userVisible": "On hundreds of generated small models the solver agrees with trying every combination, every conflict set is as small as it can be, every correction set restores feasibility, and a checker that does not use the solver accepts every solution and refuses broken ones.",
+    "check": "node scripts/runtime.mjs && node scripts/py.mjs -m unittest tests.test_properties"
+  },
+  {
+    "id": "time-slots",
+    "userVisible": "A model can place blocks of time: blocks on one calendar never overlap, a block that depends on another starts after it ends, working hours are respected, a starting schedule passed as a hint is never made worse, and an impossible due date is explained.",
+    "check": "node scripts/runtime.mjs && node scripts/py.mjs -m unittest tests.test_intervals"
+  },
+  {
+    "id": "interchange-schemas",
+    "userVisible": "The model this module reads and the solution it writes are the shapes the kit publishes, so another module's output can be passed in and this module's output can be passed on.",
+    "check": "node scripts/runtime.mjs && node scripts/py.mjs -m unittest tests.test_schemas"
   }
 ]

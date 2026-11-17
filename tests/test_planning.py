@@ -32,7 +32,9 @@ class PlanningRegression(unittest.TestCase):
                     assert isinstance(violated, list)
                     self.assertEqual(sorted(entry["id"] for entry in violated), expected["soft_violated"])
 
-    def test_infeasible_scenarios_have_the_recorded_correction_sets_and_every_recorded_conflict_is_minimal(self) -> None:
+    def test_infeasible_scenarios_have_the_recorded_correction_sets_and_every_recorded_conflict_is_minimal(
+        self,
+    ) -> None:
         assert isinstance(MODEL, dict) and isinstance(EXPECTED, dict)
         checked = 0
         for scenario, expected in EXPECTED.items():
@@ -52,7 +54,9 @@ class PlanningRegression(unittest.TestCase):
                     members = frozenset(conflict)
                     self.assertIsNotNone(oracle.core(members), f"{conflict} must be infeasible")
                     for member in members:
-                        self.assertIsNone(oracle.core(members - {member}), f"{conflict} without {member} must be feasible")
+                        self.assertIsNone(
+                            oracle.core(members - {member}), f"{conflict} without {member} must be feasible"
+                        )
                     checked += 1
         self.assertGreaterEqual(checked, 38)
 

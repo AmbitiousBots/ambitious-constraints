@@ -19,11 +19,10 @@ There is no server. "Launch" means installing the pinned tools and dependencies 
 
 ```text
 mise trust && mise install
-npm ci
-npm run build
+npm run runtime
 ```
 
-[mise](https://mise.jdx.dev) installs the tool versions pinned in `.mise.toml`. Skip `npm ci` and `npm run build` while the repository has no dependencies or build step yet. It is ready when `node verify/run --doctor` prints `ok` on every row.
+[mise](https://mise.jdx.dev) installs the tool versions pinned in `.mise.toml`. `npm run runtime` builds `dist/` and installs the module with its pinned solver runtime into `.build/home` through the kit installer; the tests solve with that runtime. It is ready when `node verify/run --doctor` prints `ok` on every row and `npm run runtime` prints where the runtime is.
 
 ## Doctor
 
@@ -41,12 +40,12 @@ Read-only. It checks the Node version against `package.json`, that dependencies 
 
 Each check runs from the repository root with `AMBITIOUS_HOME` set to its own new, empty temporary directory, so two runs never share a database and nothing touches the default home. Runs can go side by side.
 
-To drive the binary by hand the way a bot does, give it a home and fixed `--now` and `--seed`, then read stdout and the exit code. Every module has `selfcheck` and `commands`:
+To drive the binary by hand the way a bot does, give it a home and fixed `--now` and `--seed`, then read stdout and the exit code. Every module has `selfcheck` and `commands`. A fresh home has no solver runtime, so `selfcheck` reports it as missing in `data.warnings` and the solving commands answer `E_RUNTIME`; `node scripts/runtime.mjs "$AMBITIOUS_HOME"` installs it there:
 
 ```text
 export AMBITIOUS_HOME="$(mktemp -d)"
-node dist/ambitious-<module>.mjs selfcheck --now 2026-01-01T00:00:00Z --seed 7; echo "exit $?"
-node dist/ambitious-<module>.mjs commands
+python3 dist/ambitious-constraints.pyz selfcheck --now 2026-01-01T00:00:00Z --seed 7; echo "exit $?"
+python3 dist/ambitious-constraints.pyz commands
 ```
 
 ## Feature map
@@ -57,7 +56,7 @@ node dist/ambitious-<module>.mjs commands
 - `userVisible`: one plain sentence saying what a person who talks to the bot can rely on.
 - `check`: one shell command that exits 0 only when that is true. It must run the built binary or another real entry point, not an internal function, and must check the result as well as the action: the exit code, the envelope, the rows that were stored.
 
-The list starts with the two features every repository has: the standalone check and the model check. Add one entry for each command the module gains, in the same pull request as the command. Put a longer check in a script under `verify/checks/` and make it print what it ran and what it saw. If a check cannot pass because a precondition is missing, leave it failing and say why; do not weaken the check.
+The list starts with the two features every repository has: the standalone check and the model check. `install-and-decide` is the whole story on a fresh home: it runs the kit installer with `--runtime`, then drives every kind of command. Add one entry for each thing the module gains that a person can rely on, in the same pull request. Put a longer check in a script under `verify/checks/` and make it print what it ran and what it saw. If a check cannot pass because a precondition is missing, leave it failing and say why; do not weaken the check.
 
 ## Evidence
 

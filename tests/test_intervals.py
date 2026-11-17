@@ -39,15 +39,33 @@ def schedule_model(tasks: int, calendars: int, block: int, seed: int, *, hinted:
         for chunk in range(chunks):
             name = f"t{task}_{chunk}"
             names.append(name)
-            variables.append({"name": f"{name}_s", "type": "int", "domain": {"ranges": [[lo, hi - block] for lo, hi in free]}})
+            variables.append(
+                {"name": f"{name}_s", "type": "int", "domain": {"ranges": [[lo, hi - block] for lo, hi in free]}}
+            )
             variables.append({"name": f"{name}_e", "type": "int", "domain": {"lo": 0, "hi": horizon}})
-            variables.append({"name": name, "type": "interval", "interval": {"start": f"{name}_s", "size": block, "end": f"{name}_e"}})
+            variables.append(
+                {
+                    "name": name,
+                    "type": "interval",
+                    "interval": {"start": f"{name}_s", "size": block, "end": f"{name}_e"},
+                }
+            )
             lanes[calendar].append(name)
-            start = next(lo + step * block for lo, hi in free for step in range((hi - lo) // block) if lo + step * block >= max(cursor[calendar], earliest))
+            start = next(
+                lo + step * block
+                for lo, hi in free
+                for step in range((hi - lo) // block)
+                if lo + step * block >= max(cursor[calendar], earliest)
+            )
             cursor[calendar] = earliest = start + block
             hints[f"{name}_s"] = start
             constraints.append(
-                {"id": f"span_{name}", "kind": "linear", "args": {"terms": [[1, f"{name}_e"], [-1, "makespan"]], "op": "<=", "rhs": 0}, "strength": "structural"}
+                {
+                    "id": f"span_{name}",
+                    "kind": "linear",
+                    "args": {"terms": [[1, f"{name}_e"], [-1, "makespan"]], "op": "<=", "rhs": 0},
+                    "strength": "structural",
+                }
             )
         finished[task] = earliest
         makespan = max(makespan, earliest)
@@ -56,10 +74,19 @@ def schedule_model(tasks: int, calendars: int, block: int, seed: int, *, hinted:
         rows += [{"before": chunk_names[other][-1], "after": names[0]} for other in after]
         if rows:
             constraints.append(
-                {"id": f"order_t{task}", "kind": "precedence", "args": {"rows": rows}, "strength": "hard", "category": "fact", "label": f"Task {task} keeps its order"}
+                {
+                    "id": f"order_t{task}",
+                    "kind": "precedence",
+                    "args": {"rows": rows},
+                    "strength": "hard",
+                    "category": "fact",
+                    "label": f"Task {task} keeps its order",
+                }
             )
     for calendar, names in lanes.items():
-        constraints.append({"id": f"lane_{calendar}", "kind": "no_overlap", "args": {"intervals": names}, "strength": "structural"})
+        constraints.append(
+            {"id": f"lane_{calendar}", "kind": "no_overlap", "args": {"intervals": names}, "strength": "structural"}
+        )
     variables.append({"name": "makespan", "type": "int", "domain": {"lo": 0, "hi": horizon}})
     model: dict[str, object] = {
         "schema": "constraint-model.v1",
@@ -91,10 +118,16 @@ def with_blocking_intervals(raw: dict[str, object], days: int) -> dict[str, obje
         variables += [
             {"name": f"{name}_s", "type": "int", "domain": {"lo": start, "hi": start}},
             {"name": f"{name}_e", "type": "int", "domain": {"lo": end, "hi": end}},
-            {"name": name, "type": "interval", "interval": {"start": f"{name}_s", "size": end - start, "end": f"{name}_e"}},
+            {
+                "name": name,
+                "type": "interval",
+                "interval": {"start": f"{name}_s", "size": end - start, "end": f"{name}_e"},
+            },
         ]
     lanes = [
-        {**entry, "args": {"intervals": [*entry["args"]["intervals"], *closed]}} if entry["kind"] == "no_overlap" else entry
+        {**entry, "args": {"intervals": [*entry["args"]["intervals"], *closed]}}
+        if entry["kind"] == "no_overlap"
+        else entry
         for entry in constraints
     ]
     return {**raw, "variables": variables, "constraints": lanes}
@@ -188,15 +221,29 @@ class TimeSlots(unittest.TestCase):
         variables += [
             {"name": "a", "type": "interval", "interval": {"start": "a_s", "size": 3, "end": "a_e"}},
             {"name": "b", "type": "interval", "interval": {"start": "b_s", "size": 3, "end": "b_e"}},
-            {"name": "c", "type": "interval", "interval": {"start": "c_s", "size": 3, "end": "c_e", "present": "use_c"}},
+            {
+                "name": "c",
+                "type": "interval",
+                "interval": {"start": "c_s", "size": 3, "end": "c_e", "present": "use_c"},
+            },
             {"name": "end", "type": "int", "domain": {"lo": 0, "hi": 10}},
         ]
         constraints: list[dict[str, object]] = [
-            {"id": "capacity", "kind": "cumulative", "args": {"intervals": ["a", "b", "c"], "demands": [2, 2, 2], "capacity": 3}, "strength": "structural"},
+            {
+                "id": "capacity",
+                "kind": "cumulative",
+                "args": {"intervals": ["a", "b", "c"], "demands": [2, 2, 2], "capacity": 3},
+                "strength": "structural",
+            },
             {"id": "want_c", "kind": "fix", "args": {"lit": "use_c"}, "strength": "soft", "weight": 100},
         ]
         constraints += [
-            {"id": f"span_{name}", "kind": "linear", "args": {"terms": [[1, f"{name}_e"], [-1, "end"]], "op": "<=", "rhs": 0, **extra}, "strength": "structural"}
+            {
+                "id": f"span_{name}",
+                "kind": "linear",
+                "args": {"terms": [[1, f"{name}_e"], [-1, "end"]], "op": "<=", "rhs": 0, **extra},
+                "strength": "structural",
+            }
             for name, extra in (("a", {}), ("b", {}), ("c", {"if": ["use_c"]}))
         ]
         raw = {
@@ -209,7 +256,15 @@ class TimeSlots(unittest.TestCase):
         solved = solution(raw, REFERENCE, None, self.engine)
         self.assertEqual((solved["status"], solved["objective"]), ("optimal", 9))
         self.assertEqual(solved["checked"], {"violations": []})
-        cheaper = solution({**raw, "constraints": [dict(entry, weight=1) if entry["id"] == "want_c" else entry for entry in constraints]}, REFERENCE, None, self.engine)
+        cheaper = solution(
+            {
+                **raw,
+                "constraints": [dict(entry, weight=1) if entry["id"] == "want_c" else entry for entry in constraints],
+            },
+            REFERENCE,
+            None,
+            self.engine,
+        )
         self.assertEqual((cheaper["objective"], cheaper["soft_violated"]), (7, [{"id": "want_c", "weight": 1}]))
         self.assertEqual(cheaper["checked"], {"violations": []})
 
@@ -220,9 +275,23 @@ class TimeSlots(unittest.TestCase):
         broken = [dict(entry, strength="hard") if entry["kind"] == "no_overlap" else entry for entry in constraints]
         with self.assertRaises(ModelError) as raised:
             compile_model({**raw, "constraints": broken})
-        self.assertEqual([problem.code for problem in raised.exception.problems if problem.severity == "error"], ["STRUCTURAL_ONLY"])
+        self.assertEqual(
+            [problem.code for problem in raised.exception.problems if problem.severity == "error"], ["STRUCTURAL_ONLY"]
+        )
         with self.assertRaises(ModelError):
-            compile_model({**raw, "constraints": [{"id": "bad", "kind": "no_overlap", "args": {"intervals": ["makespan"]}, "strength": "structural"}]})
+            compile_model(
+                {
+                    **raw,
+                    "constraints": [
+                        {
+                            "id": "bad",
+                            "kind": "no_overlap",
+                            "args": {"intervals": ["makespan"]},
+                            "strength": "structural",
+                        }
+                    ],
+                }
+            )
 
 
 if __name__ == "__main__":

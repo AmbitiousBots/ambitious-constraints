@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import sys
 import unittest
 from collections.abc import Mapping
 
@@ -91,8 +92,12 @@ class PricingRegression(unittest.TestCase):
                 low = high = values["price"]
                 if objective > 0:
                     floor = int(math.ceil(0.95 * objective))
-                    low = integers(solved(Case(*_base(case), floor_objective=floor, price_direction="min"), self.engine))["price"]
-                    high = integers(solved(Case(*_base(case), floor_objective=floor, price_direction="max"), self.engine))["price"]
+                    low = integers(
+                        solved(Case(*_base(case), floor_objective=floor, price_direction="min"), self.engine)
+                    )["price"]
+                    high = integers(
+                        solved(Case(*_base(case), floor_objective=floor, price_direction="max"), self.engine)
+                    )["price"]
                 self.assertEqual((low, high), (row["flat_lo"], row["flat_hi"]))
                 self.assertTrue(low <= values["price"] <= high)
                 again = solved(Case(*_base(case), fix_price=row["price"]), self.engine)
@@ -105,8 +110,11 @@ class PricingRegression(unittest.TestCase):
                     round(row["consult_h"] * 100),
                 ):
                     same_plan += 1
-                    self.assertEqual(summary(case, values), {key: row[key] for key in ("revenue", "cash_profit", "profit", "reach_target")})
-        print(f"pricing regression: 288 rows, same price in {same_price}, same full plan in {same_plan}")  # noqa: T201
+                    self.assertEqual(
+                        summary(case, values),
+                        {key: row[key] for key in ("revenue", "cash_profit", "profit", "reach_target")},
+                    )
+        sys.stderr.write(f"pricing regression: 288 rows, same price in {same_price}, same full plan in {same_plan}\n")
 
     def test_fixed_price_points_are_reproduced(self) -> None:
         points = EXPECTED["points"]

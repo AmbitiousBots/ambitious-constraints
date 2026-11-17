@@ -36,9 +36,17 @@ def random_model(rng: random.Random, *, tight: bool) -> dict[str, object]:
             if rng.random() < 0.3:
                 args["if"] = [rng.choice(literals)]
         elif kind == "implication":
-            args = {"if": rng.sample(literals, rng.randint(0, 2)), "then": rng.sample(literals, rng.randint(1, 2)), "all": rng.random() < 0.5}
+            args = {
+                "if": rng.sample(literals, rng.randint(0, 2)),
+                "then": rng.sample(literals, rng.randint(1, 2)),
+                "all": rng.random() < 0.5,
+            }
         elif kind == "fix":
-            args = {"lit": rng.choice(literals)} if rng.random() < 0.6 else {"var": rng.choice(ints), "value": rng.randint(0, 3)}
+            args = (
+                {"lit": rng.choice(literals)}
+                if rng.random() < 0.6
+                else {"var": rng.choice(ints), "value": rng.randint(0, 3)}
+            )
         else:
             args = {"lits": rng.sample(literals, rng.randint(2, 4))}
         strength = rng.choice(("hard", "hard", "hard", "structural", "soft"))
@@ -157,14 +165,27 @@ class Properties(unittest.TestCase):
             hard_only = [dict(entry, strength="structural") for entry in listed if entry["strength"] != "soft"]
             strict = compile_model({**raw, "constraints": hard_only, "objective": None})[0]
             for _ in range(5):
-                values = {variable.name: rng.choice([v for lo, hi in variable.ranges for v in range(lo, hi + 1)]) for variable in model.variables}
+                values = {
+                    variable.name: rng.choice([v for lo, hi in variable.ranges for v in range(lo, hi + 1)])
+                    for variable in model.variables
+                }
                 pinned = [
-                    {"id": f"pin_{name}", "kind": "linear", "args": {"terms": [[1, name]], "op": "==", "rhs": value}, "strength": "structural"}
+                    {
+                        "id": f"pin_{name}",
+                        "kind": "linear",
+                        "args": {"terms": [[1, name]], "op": "==", "rhs": value},
+                        "strength": "structural",
+                    }
                     for name, value in values.items()
                     if model.variable(name).type != "enum"
                 ]
                 pinned.append(
-                    {"id": "pin_mode", "kind": "fix", "args": {"lit": f"mode={'abc'[values['mode']]}"}, "strength": "structural"}
+                    {
+                        "id": "pin_mode",
+                        "kind": "fix",
+                        "args": {"lit": f"mode={'abc'[values['mode']]}"},
+                        "strength": "structural",
+                    }
                 )
                 fixed = {**raw, "constraints": hard_only + pinned, "objective": None}
                 by_solver = solution(fixed, REFERENCE, None, self.engine)["status"] != "infeasible"
@@ -181,7 +202,9 @@ class Properties(unittest.TestCase):
         for _ in range(10):
             raw: Mapping[str, object] = random_model(rng, tight=True)
             self.assertEqual(solution(raw, REFERENCE, None, self.engine), solution(raw, REFERENCE, None, self.engine))
-            self.assertEqual(explain(raw, REFERENCE, None, self.engine, 30, 6), explain(raw, REFERENCE, None, self.engine, 30, 6))
+            self.assertEqual(
+                explain(raw, REFERENCE, None, self.engine, 30, 6), explain(raw, REFERENCE, None, self.engine, 30, 6)
+            )
 
 
 if __name__ == "__main__":

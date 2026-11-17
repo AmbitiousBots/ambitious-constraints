@@ -37,3 +37,4 @@ ban-relative-imports = "parents"
 "**/ai/**" = ["TID251"]
 "**/install/**" = ["TID251"]
 "**/db/**" = ["TID251"]
+"tests/**" = ["TID251"]

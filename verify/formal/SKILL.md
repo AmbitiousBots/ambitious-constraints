@@ -17,33 +17,37 @@ It needs the pinned tools (`mise trust && mise install`): Java, and `tla2tools.j
 
 ## What is covered
 
-Last confirmed in step with the code at commit: none yet. When you add the first real model, write the commit here, and move it forward only after you have read the covered code at the new commit and confirmed that the model still describes it.
+Last confirmed in step with the code at the commit that added `spec/ModelCommit.tla`. Move this forward only after you have read the covered code at the new commit and confirmed that the model still describes it.
 
 | Model | Covers | Each model step is this code |
 |---|---|---|
-| `spec/Sample.tla` | Nothing in this module. It is the starting example: a count that must never go past `Capacity`. Replace it with the module's first real model. | |
+| `spec/ModelCommit.tla` | `commit` and `clone` in `src/ambitious_constraints/cli/main.py` with `commit_model`, `clone_model` and `with_receipt` in `src/ambitious_constraints/db/store.py` | `Propose`: `model propose`, which reads the stored version and writes nothing. `Commit`: one `model commit` transaction: the receipt lookup, the digest comparison (`sent = want[w]`), the `base_version` comparison (`base[w] = Version`), the insert of the new version and of the receipt. `RefuseStale`: the `E_STALE` failure, which stores nothing. `Replay`: a repeated request with the same `idem_key`, answered from the receipt. `NextRequest`: the caller choosing a new `idem_key`. `Clone`: one `model clone` transaction. |
 
-For each real model, add a row: the file, the source files and functions it describes, and which piece of code each model step stands for. One model step must be one indivisible step in the code, for example one transaction.
+One model step is one indivisible step in the code: every write command runs inside the single `BEGIN IMMEDIATE` transaction the kit wraps around it, so two commits never interleave.
 
 ## The properties, in plain words
 
-For each invariant, add a row that a person can read without knowing TLA+.
-
 | Invariant | Promise | Harm if it broke |
 |---|---|---|
-| `WithinCapacity` (sample) | The count never goes past the capacity. | None; it is the sample. |
+| `NoLostUpdate` | A commit succeeds only against the version it was prepared from. | A person approves a change, and it silently erases a change someone else stored a moment earlier. |
+| `CommittedIsProposed` | What is stored is what was proposed and shown. | A person approves one model and a different one becomes the record. |
+| `ReceiptNamesAStoredVersion` | A repeated request is answered with a version that exists. | A bot would report a version that was never stored. |
+| `CloneIsTheNamedVersion` | A clone is the version its `forked_from` names. | A copy made to explore one version would start from another. |
 
-Also write down the bounds (how many items, how many actors) and what the model leaves out. A pass covers the model within those bounds, not the whole module.
+Bounds and assumptions: two writers, two contents, three versions, one model and one clone. SQLite gives each write command an exclusive transaction. The model does not cover the solver or the analysis commands; those are read-only and are covered by the tests against brute force.
 
-## Each property must be seen to fail
+## Each property has been seen to fail
 
-`spec/broken/` holds copies of a model with one protection removed, and `spec/broken/EXPECTED.json` names the invariant each must break and why. `npm run tlc` fails if a broken variant passes or breaks a different invariant. A property with no broken variant has never been seen to fail and proves nothing yet.
+| Broken variant | Protection removed | Must break |
+|---|---|---|
+| `CommitIgnoresBaseVersion` | The comparison of `base_version` with the stored version | `NoLostUpdate` |
+| `CommitWithoutDigest` | The comparison of the model with the proposed digest | `CommittedIsProposed` |
+| `CloneCopiesLatest` | Copying the named version rather than the newest | `CloneIsTheNamedVersion` |
 
 ## When you change covered code
 
-1. Decide whether the change alters a step in the coverage table: a new state, a different order, a new way to fail. If it does not, run `npm run tlc` and you are done.
+1. Decide whether the change alters a step in the table above: a new write, a different order, a new way to fail. If it does not, run `npm run tlc` and you are done.
 2. If it does, change the model first so it describes the new design, run `npm run tlc`, then change the code to match.
-3. If TLC reports a violation, read it with the pstack `/statechart` skill (pstack is a public plugin of agent skills for the Cursor editor; install it from the plugin marketplace inside Cursor by searching for "pstack". `/statechart` turns TLC output into the shortest failing path in plain words, and draws the state chart when the check passes. Without it, read the numbered states TLC prints from top to bottom: each one is one step, and the last is where the rule broke). Retell the path in the code's terms.
-4. Decide which is wrong. If the path can happen in the code, it is a real bug: fix the code, keep the property. If it cannot, the model is wrong: fix the model so it matches the code, and say in the pull request what was wrong with it. Never weaken or delete an invariant to get a pass.
+3. If TLC reports a violation, read the numbered states it prints from top to bottom: each one is one step, and the last is where the rule broke. Retell the path in the code's terms.
+4. Decide which is wrong. If the path can happen in the code, it is a real bug: fix the code, keep the property. If it cannot, fix the model so it matches the code, and say in the pull request what was wrong with it. Never weaken or delete an invariant to get a pass.
 5. For a new protection, add a broken variant that removes only that protection, with its entry in `EXPECTED.json`.
-6. Update the coverage table and the sync commit above.

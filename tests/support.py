@@ -16,7 +16,7 @@ from ambitious_constraints.domain.explain import Oracle
 from ambitious_constraints.domain.model import Compiled
 
 ROOT = Path(__file__).resolve().parent.parent
-HOME = Path(os.environ.get("AMBITIOUS_HOME") or ROOT / ".build" / "home")
+HOME = Path(os.environ.get("CONSTRAINTS_RUNTIME_HOME") or ROOT / ".build" / "home")
 BINARY = ROOT / "dist" / "ambitious-constraints.pyz"
 NOW = "2026-01-01T00:00:00Z"
 
@@ -54,7 +54,9 @@ class Cli:
     def close(self) -> None:
         self.directory.cleanup()
 
-    def raw(self, command: str, payload: object | None = None, *, seed: int = 7, now: str = NOW) -> subprocess.CompletedProcess[str]:
+    def raw(
+        self, command: str, payload: object | None = None, *, seed: int = 7, now: str = NOW
+    ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, str(BINARY), *command.split(" "), "--db", self.db, "--now", now, "--seed", str(seed)],
             input="" if payload is None else json.dumps(payload),
@@ -72,7 +74,9 @@ class Cli:
             raise AssertionError(f"{command} exited {done.returncode}: {done.stdout}")
         return parsed
 
-    def data(self, command: str, payload: object | None = None, *, seed: int = 7, now: str = NOW) -> Mapping[str, object]:
+    def data(
+        self, command: str, payload: object | None = None, *, seed: int = 7, now: str = NOW
+    ) -> Mapping[str, object]:
         parsed = self.call(command, payload, seed=seed, now=now)
         if parsed["ok"] is not True:
             raise AssertionError(f"{command} failed: {parsed['errors']}")

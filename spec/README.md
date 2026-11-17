@@ -9,9 +9,18 @@ TLA+ models of the behavior people rely on, checked by TLC, the TLA+ model check
   { "Y": { "invariant": "<name>", "because": "<plain sentence>" } }
   ```
 
-A broken variant that passes, breaks a different invariant, or cannot be read fails the check: it means the model would not catch the mistake it was written to catch. Every spec directory needs at least one model and one broken variant.
+A broken variant that passes, breaks a different invariant, or cannot be read fails the check: it means the model would not catch the mistake it was written to catch.
 
-`Sample` is the starting example: a count that must never go past `Capacity`. `broken/SampleNoGuard` drops the "is there room" test from `Add`, and TLC shows the count reaching `Capacity + 1`. Replace both with your own models.
+`ModelCommit` models how a stored model changes: writers propose against the version they saw, commit with that version and the proposed content, retry with the same request, start a new request, and clone a version. It checks four rules with two writers, two possible contents and up to three versions:
+
+| Invariant | In plain words |
+|---|---|
+| `NoLostUpdate` | Every stored version was committed against the version just before it, so one writer never silently replaces what another stored. |
+| `CommittedIsProposed` | The content stored under a receipt is the content that writer proposed. |
+| `ReceiptNamesAStoredVersion` | A receipt never names a version that is not stored. |
+| `CloneIsTheNamedVersion` | A clone holds exactly the content of the version it says it came from. |
+
+`broken/CommitIgnoresBaseVersion` drops the comparison of `base_version` with the stored version, `broken/CommitWithoutDigest` drops the comparison of the model with its digest, and `broken/CloneCopiesLatest` copies the newest version instead of the named one.
 
 ## Run it
 
