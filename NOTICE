@@ -1,5 +1,24 @@
-ambitious-template
+ambitious-constraints
 Copyright 2026 Ambitious Corporation
 
 This product includes software developed by Ambitious Corporation
 (https://ambitiousbots.com).
+
+This product includes ambitious_kit, licensed under the Apache License,
+Version 2.0. The copy under vendor/ is the kit-v0.4.0 release of the
+ambitious-kit repository.
+
+The solver runtime is not part of this product or its releases. When a
+person asks for it, the kit installer downloads these packages from the
+Python package index, at the versions and hashes listed in
+src/ambitious_constraints/runtime.txt:
+
+  ortools            Apache License, Version 2.0
+  absl-py            Apache License, Version 2.0
+  protobuf           BSD 3-Clause License
+  numpy              BSD 3-Clause License
+  pandas             BSD 3-Clause License
+  python-dateutil    Apache License, Version 2.0, and BSD 3-Clause License
+  tzdata             Apache License, Version 2.0
+  typing-extensions  Python Software Foundation License, Version 2
+  immutabledict      MIT License

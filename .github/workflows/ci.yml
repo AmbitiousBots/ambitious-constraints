@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-check:
+    name: Every check a release must pass
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+    steps:
+      - name: Check out the repository (actions/checkout v7.0.1)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install the Java, Node and Python versions pinned in .mise.toml (jdx/mise-action v5.2.8)
+        uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785
+        with:
+          version: 2026.11.8
+      - name: Install the pinned lint tools
+        run: "python3 -m pip install --require-hashes --only-binary :all: --requirement scripts/dev-requirements.txt"
+      - name: Type check, lint, install the pinned runtime with the kit installer, test, contract, TLC, verify
+        run: npm run release:check
+
+  debian-13-no-root:
+    name: Install and test on Debian 13 as a user without root
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      image: debian:13@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6
+    env:
+      NODE_VERSION: 24.8.0
+      NODE_SHA256: 2598641d188b41793930917f1a99a81c9615856b4205d408a44ab676c1acbb3d
+    steps:
+      - name: As root, only this - the distribution's Python 3.13 with venv, tools to fetch Node, and an unprivileged user
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 python3-venv ca-certificates curl xz-utils
+          useradd --create-home box
+      - name: Check out the repository (actions/checkout v7.0.1)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Hand the checkout to the unprivileged user
+        run: chown -R box:box "$GITHUB_WORKSPACE"
+      - name: As the user, put Node 24 in the home directory and verify its checksum
+        run: |
+          su box -c '
+            set -eu
+            cd "$HOME"
+            curl -sSfLO "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz"
+            echo "${NODE_SHA256}  node-v${NODE_VERSION}-linux-x64.tar.xz" | sha256sum -c -
+            tar -xJf "node-v${NODE_VERSION}-linux-x64.tar.xz"
+            ln -s "node-v${NODE_VERSION}-linux-x64" node
+          '
+      - name: As the user, install the module and its pinned runtime with the kit installer, then selfcheck
+        run: |
+          su box -c '
+            set -eu
+            export PATH="$HOME/node/bin:$PATH" AMBITIOUS_HOME="$HOME/ambitious"
+            cd "$GITHUB_WORKSPACE"
+            id
+            python3 --version
+            node --version
+            node scripts/runtime.mjs "$AMBITIOUS_HOME"
+            python3 "$AMBITIOUS_HOME/bin/ambitious-constraints" selfcheck
+            python3 "$AMBITIOUS_HOME/bin/ambitious-constraints" selfcheck | grep -q "\"state\":\"ready\""
+          '
+      - name: As the user, run the tests, the contract tests and the verification features
+        run: |
+          su box -c '
+            set -eu
+            export PATH="$HOME/node/bin:$PATH"
+            cd "$GITHUB_WORKSPACE"
+            node scripts/runtime.mjs
+            node scripts/py.mjs -m unittest discover -s tests -t .
+            node scripts/py.mjs -m ambitious_kit.contract dist/ambitious-constraints.pyz
+            node verify/run --only contract --only install-and-decide --only without-the-runtime --only write-rules --only analysis --only pricing-regression --only planning-regression --only checked-against-brute-force --only time-slots --only interchange-schemas
+          '

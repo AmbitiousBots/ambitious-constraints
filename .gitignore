@@ -8,3 +8,6 @@ spec/states/
 *_TTrace_*
 .build/
 .DS_Store
+.venv/
+.mypy_cache/
+.ruff_cache/

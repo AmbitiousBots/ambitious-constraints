@@ -1,0 +1,27 @@
+{
+  "params": [
+    { "name": "review_min_base", "value": 22.5, "unit": "minutes per paid customer per month", "confidence": "sourced", "source": "planning conversation", "quote": "15 to 30 minutes a month per customer; midpoint 22.5, swept 15, 22.5 and 30" },
+    { "name": "reviewer_rate", "value": 48, "unit": "currency per hour", "confidence": "derived", "source": "published freelance rate range for automation work", "quote": "35 to 60 per hour; midpoint, used as a proxy" },
+    { "name": "owner_value", "value": 225, "unit": "currency per hour", "confidence": "derived", "source": "published advisory rate range", "quote": "100 to 350 per hour; midpoint, the owner's opportunity cost" },
+    { "name": "owner_cap_h", "value": 60, "unit": "hours per month", "confidence": "assumption", "source": "not sourced", "quote": "the owner's available hours" },
+    { "name": "owner_eng_h", "value": 8, "unit": "hours per month", "confidence": "assumption", "source": "not sourced", "quote": "fixed engineering hours" },
+    { "name": "owner_spotcheck_pct", "value": 10, "unit": "percent", "confidence": "sourced", "source": "operating plan", "quote": "the owner spot-checks 10% of reviews" },
+    { "name": "reviewer_cap_h", "value": 160, "unit": "hours per month", "confidence": "assumption", "source": "not sourced", "quote": "two part-time reviewers" },
+    { "name": "free_support_min", "value": 0.5, "unit": "minutes per free account per month", "confidence": "assumption", "source": "not sourced", "quote": "small support load from free accounts" },
+    { "name": "conv_base", "value": 4.0, "unit": "percent of free accounts", "confidence": "sourced", "source": "published survey of free-to-paid conversion", "quote": "3% to 5% is good; midpoint 4%, swept 2, 4 and 7" },
+    { "name": "conv_low", "value": 2.0, "unit": "percent", "confidence": "sourced", "source": "published survey of free-to-paid conversion", "quote": "a fifth of products convert below 2.5%" },
+    { "name": "conv_high", "value": 7.0, "unit": "percent", "confidence": "sourced", "source": "published survey of free-to-paid conversion", "quote": "6% to 8% is great" },
+    { "name": "free_users", "value": 1000, "unit": "accounts", "confidence": "assumption", "source": "not sourced", "quote": "unknown; swept 100, 300, 1000 and 3000" },
+    { "name": "consult_band_low", "value": 100, "unit": "currency per hour", "confidence": "sourced", "source": "published advisory rate range", "quote": "100 to 350 per hour" },
+    { "name": "consult_band_high", "value": 350, "unit": "currency per hour", "confidence": "sourced", "source": "published advisory rate range", "quote": "100 to 350 per hour" },
+    { "name": "consult_h_per_paid", "value": 0.5, "unit": "hours per paid customer per month at the lowest price", "confidence": "assumption", "source": "not sourced", "quote": "ceiling on demand for consulting hours" },
+    { "name": "revenue_target", "value": 10000, "unit": "currency per month", "confidence": "assumption", "source": "not sourced", "quote": "placeholder target" }
+  ],
+  "curves": {
+    "linear_tools": { "type": "linear", "p_all": 50, "p_half": 250 },
+    "value_consultant": { "type": "uniform", "lo": 150, "hi": 1500 },
+    "lognorm_250": { "type": "lognormal", "median": 250, "sigma": 0.75 },
+    "lognorm_500": { "type": "lognormal", "median": 500, "sigma": 0.75 }
+  },
+  "consulting_surcharge": { "type": "uniform", "lo": 100, "hi": 350 }
+}

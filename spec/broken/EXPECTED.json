@@ -1,0 +1,14 @@
+{
+  "CommitIgnoresBaseVersion": {
+    "invariant": "NoLostUpdate",
+    "because": "commit stores the model without comparing base_version with the stored version, so a writer who prepared against an older version overwrites what another writer committed in between"
+  },
+  "CommitWithoutDigest": {
+    "invariant": "CommittedIsProposed",
+    "because": "commit stores whatever model is sent without comparing it with the digest that propose returned, so the stored version is not the one the person saw and approved"
+  },
+  "CloneCopiesLatest": {
+    "invariant": "CloneIsTheNamedVersion",
+    "because": "clone copies the newest version while recording that it came from the version that was asked for, so the copy's forked_from names a model it does not hold"
+  }
+}

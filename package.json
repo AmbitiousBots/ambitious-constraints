@@ -1,0 +1,21 @@
+{
+  "name": "ambitious-constraints",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "build": "node scripts/py.mjs scripts/build.py",
+    "runtime": "node scripts/runtime.mjs",
+    "lint": "node scripts/py.mjs scripts/check_comments.py . --exclude vendor --exclude .build --exclude dist && node scripts/py.mjs -m ruff check src tests scripts examples verify && node scripts/check-standalone.mjs",
+    "typecheck": "node scripts/py.mjs -m mypy --config-file mypy.ini src scripts examples",
+    "test": "node scripts/runtime.mjs && node scripts/py.mjs -m unittest discover -s tests -t .",
+    "contract": "node scripts/py.mjs scripts/build.py && node scripts/py.mjs -m ambitious_kit.contract dist/ambitious-constraints.pyz",
+    "tlc": "node scripts/tlc.mjs",
+    "verify": "node verify/run",
+    "release:check": "node scripts/release-check.mjs"
+  }
+}

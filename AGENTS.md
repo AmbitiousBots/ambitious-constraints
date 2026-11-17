@@ -2,23 +2,7 @@
 
 ## Goal
 
-Ambitious is a Grok Bot configuration and monitoring service: a free Ambitious Bot template, flat per-org monthly monitoring with human review, and open-source single-purpose CLI modules with no UI that the bot drives.
-
-This repository is a GitHub template for one of those modules. It has no module code yet. It is not the Ambitious Bot template (`ambitious-template-<version>.tgz` on a kit release) and it is not the kit's repo-template, which `scripts/apply-template.mjs` copies from ambitious-kit.
-
-A change is good when an author can start a module that the bot can drive, or when the guides stay aligned with the contract that [ambitious-kit](https://github.com/AmbitiousBots/ambitious-kit) publishes. Once this copy has become a module, a change is good when the bot can do more for the person who talks to it, or the same with less risk. That person never sees this code.
-
-After you adopt a kit release, rewrite this file so it describes your module. You can start from [repo-template/AGENTS.md](https://github.com/AmbitiousBots/ambitious-kit/blob/main/repo-template/AGENTS.md) and delete any section that is only about starting from this GitHub template.
-
-## Starting a module
-
-Follow [README.md](README.md). Do not invent a layout, an envelope, an installer, or a pin process.
-
-- The contract is [MODULE_CONTRACT.md](MODULE_CONTRACT.md), a copy of the contract in ambitious-kit. The kit is the source of truth. In that copy, "this repository" means ambitious-kit. When the two differ, follow the kit, replace this copy with the contract from the kit release you adopted, and say so in the pull request under `## Decisions`.
-- Add code only by adopting a kit release, as [Start a module on the kit](https://github.com/AmbitiousBots/ambitious-kit#start-a-module-on-the-kit) describes. Run `scripts/apply-template.mjs` from a kit checkout, vendor the release tarballs after checking `SHA256SUMS`, and copy the remaining build files from the kit's `examples/hello` (TypeScript) or the kit's Python package. That command never overwrites a file that already exists, so follow [Files to replace after you adopt the kit](README.md#files-to-replace-after-you-adopt-the-kit).
-- Fill every `<<PLACEHOLDER>>` in `skills/`. Rename `skills/your-module-for-bots` and, if you keep it, `skills/your-module-page`. Skills in a module repository are named without the `ambitious-` prefix.
-- Keep [LICENSE](LICENSE) as Apache-2.0 and keep a [NOTICE](NOTICE) file. Set the first line of `NOTICE` to the new repository name, and set the copyright holder to whoever owns this module.
-- Do not copy a binary into `$AMBITIOUS_HOME/bin` by hand, and do not try to edit the pins inside a bot's installer. To try one exact release on a computer you control, use the kit's `ambitious-install` command after checking it against the kit release's `SHA256SUMS`. That check is download integrity, not the pin chain an Ambitious Bot uses. An Ambitious Bot installs only the modules pinned in its current template, and only through `ambitious-modules sync`.
+Ambitious is a Grok Bot configuration and monitoring service: a free Ambitious Bot template with a daily analysis that stays in the owner's account, the Ambitious Bot plan, $725/month per bot, for a person's review of each report, and open-source single-purpose CLI modules with no UI that the bot drives. This repo is one of those modules. The user is a person who talks to a bot and never sees this code, so a change is good when the bot can do more for them, or the same with less risk.
 
 ## How to work
 
@@ -29,21 +13,20 @@ Follow [README.md](README.md). Do not invent a layout, an envelope, an installer
 
 ## Data shape
 
-- In: JSON on stdin or `--in`, for commands that take input. Out: one JSON envelope on stdout, `{ ok, schemaVersion, module, command, data, errors, meta }`.
-- State: one SQLite file per module, at `$AMBITIOUS_HOME/<module>/<module>.sqlite` unless `--db` names another file. `AMBITIOUS_HOME` defaults to `/workspace/ambitious`. After you adopt the kit, the database shape is the files in `migrations/` plus the types in `src/domain/`. Read those before changing behavior; they are the source of truth, not this file.
-- Refuse every path under `/home/box/agent-data/`.
-- The full contract, including `selfcheck`, install assets, versioning, and the release gates, is [MODULE_CONTRACT.md](MODULE_CONTRACT.md).
+- In: JSON on stdin or `--in`. Out: one JSON envelope on stdout, `{ ok, schemaVersion, module, command, data, errors, meta }`.
+- State: one SQLite file. Its shape is the files in `src/ambitious_constraints/migrations/` plus the types in `src/ambitious_constraints/domain/model.py`. Read those before changing behavior; they are the source of truth, not this file.
+- A model is a `constraint-model.v1` document and a solution a `constraint-solution.v1` document. The schemas under `src/ambitious_constraints/schemas/` are copies of the kit's; change them in ambitious-kit first, then refresh the copies and the checksums in `tests/test_schemas.py`.
+- The full contract is [MODULE_CONTRACT.md](MODULE_CONTRACT.md), a copy of the one in the ambitious-kit repo.
 
 ## Directory boundaries
 
-These directories appear once you adopt the kit:
-
-- `src/cli/`: argument parsing and the envelope only. The one place that reads the clock, randomness and the environment.
-- `src/domain/`: pure logic with no IO. Time and randomness arrive as arguments.
-- `src/db/`: the only place that imports `node:sqlite` (or, in Python, that opens SQLite).
-- `src/ai/`: the only place with network calls, and only for keyed AI calls.
-- `spec/`: TLA+ models. `proofs/`: Lean, where used. `test/`: tests. `verify/`: the verification skill.
-- `skills/`: bot-facing guides. They tell the bot how to call the installed binary under `$AMBITIOUS_HOME/bin`. They must not claim that the module renders documents, and they must not tell the bot to compute numbers the module already returns.
+- `src/ambitious_constraints/cli/`: input parsing at the boundary and the envelope only. The one place that reads the environment; the kit runner there reads the clock and the seed.
+- `src/ambitious_constraints/domain/`: pure logic with no IO: the model and its compiler (`model.py`), the checker that does not use the solver (`check.py`), conflict enumeration (`explain.py`) and the analyses (`analysis.py`), which reach the solver only through the `Engine` protocol.
+- `src/ambitious_constraints/solver/`: the only place that imports `ortools`. It is imported lazily, after the pinned runtime is on the import path.
+- `src/ambitious_constraints/db/`: the only place that imports `sqlite3`.
+- `src/ambitious_constraints/migrations/`, `schemas/` and `runtime.txt`: package data: the forward-only migrations, the copies of the interchange schemas, and the runtime lock.
+- `examples/`: models built as data. `tests/`: tests, with recorded results under `tests/fixtures/`. `spec/`: TLA+ models. `verify/`: the verification skill. `vendor/`: the kit, unpacked, and the kit installer.
+- There is no network code anywhere in the module. The kit installer downloads the runtime.
 
 ## Judgment calls
 
@@ -53,4 +36,6 @@ These directories appear once you adopt the kit:
 - How much to build: the smallest change that meets the goal. Delete before you add.
 - What counts as proof: output from `verify/run` against a fresh `AMBITIOUS_HOME`, not a reading of the diff.
 - What to write down: a choice you made without asking goes in the PR under `## Decisions`.
+- Whether a result is trustworthy: only when the independent checker agrees with the solver. A new constraint kind is not done until `check.py` evaluates it, the brute-force property tests generate it, and the solver and the checker are compared on it.
+- What may change an answer: only the input, `--seed` and the runtime lock. Never add a clock limit, a second solver worker or a default that depends on the machine.
 - Wording: keep code and docs generic for every kind of organization. No person, bot or customer names, no industry terms, and no compliance or security claim beyond what the code enforces.
