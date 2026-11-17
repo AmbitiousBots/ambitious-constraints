@@ -29,7 +29,7 @@ def solver_version() -> str:
 
 
 class Built:
-    def __init__(self, model: Compiled, *, optimize: bool) -> None:
+    def __init__(self, model: Compiled, *, optimize: bool, gated: bool) -> None:
         self.model = model
         self.cp = cp_model.CpModel()
         self.vars: dict[str, cp_model.IntVar] = {}
@@ -67,7 +67,7 @@ class Built:
                 )
         for constraint in model.constraints:
             gate = None
-            if constraint.strength == "hard":
+            if constraint.strength == "hard" and gated:
                 gate = self.assumptions[constraint.id] = self.cp.NewBoolVar(f"A_{constraint.id}")
             elif constraint.strength == "soft":
                 gate = self.soft[constraint.id] = self.cp.NewBoolVar(f"S_{constraint.id}")
@@ -170,7 +170,7 @@ def _status(code: int) -> Status:
 
 
 def solve(model: Compiled, seed: int, deterministic_time: int) -> Outcome:
-    built = Built(model, optimize=True)
+    built = Built(model, optimize=True, gated=False)
     solver, code = built.run(seed, deterministic_time, None)
     status = _status(code)
     if status in ("infeasible", "unknown"):
@@ -186,7 +186,7 @@ def solve(model: Compiled, seed: int, deterministic_time: int) -> Outcome:
 
 class ConflictOracle:
     def __init__(self, model: Compiled, seed: int, deterministic_time: int) -> None:
-        self.built = Built(model, optimize=False)
+        self.built = Built(model, optimize=False, gated=True)
         self.seed = seed
         self.deterministic_time = deterministic_time
         self.hard = frozenset(self.built.assumptions)

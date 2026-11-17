@@ -463,7 +463,7 @@ class _Compiler:
             return None if term is None else FixVar(term, self.number(args.get("value"), f"{path}/value"), when)
         if kind == "implication":
             return Implication(
-                self.lits(args.get("if"), f"{path}/if", required=True),
+                self.lits(args.get("if"), f"{path}/if", required=False),
                 self.lits(args.get("then"), f"{path}/then", required=True),
                 args.get("all") is True,
             )
@@ -764,6 +764,13 @@ def apply_overrides(raw: Mapping[str, object], overrides: Mapping[str, object]) 
     added = overrides.get("add")
     kept.extend(added if isinstance(added, list) else [])
     model["constraints"] = kept
+    evidence = model.get("evidence")
+    if isinstance(evidence, list):
+        model["evidence"] = [
+            entry
+            for entry in evidence
+            if not (isinstance(entry, dict) and isinstance(target := entry.get("target"), dict) and target.get("constraint") in off)
+        ]
     model.pop("scenarios", None)
     return model
 
