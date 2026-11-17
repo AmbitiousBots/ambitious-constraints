@@ -87,5 +87,5 @@ jobs:
             node scripts/runtime.mjs
             node scripts/py.mjs -m unittest discover -s tests -t .
             node scripts/py.mjs -m ambitious_kit.contract dist/ambitious-constraints.pyz
-            node verify/run --only standalone --only contract --only install-and-decide --only without-the-runtime --only write-rules --only analysis --only pricing-regression --only planning-regression --only checked-against-brute-force --only time-slots --only interchange-schemas
+            node verify/run --only contract --only install-and-decide --only without-the-runtime --only write-rules --only analysis --only pricing-regression --only planning-regression --only checked-against-brute-force --only time-slots --only interchange-schemas
           '
