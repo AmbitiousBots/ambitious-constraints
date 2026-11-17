@@ -30,7 +30,7 @@ jobs:
         with:
           version: 2026.11.8
       - name: Install the pinned lint tools
-        run: python3 -m pip install --require-hashes --only-binary :all: --requirement scripts/dev-requirements.txt
+        run: "python3 -m pip install --require-hashes --only-binary :all: --requirement scripts/dev-requirements.txt"
       - name: Type check, lint, install the pinned runtime with the kit installer, test, contract, TLC, verify
         run: npm run release:check
 
