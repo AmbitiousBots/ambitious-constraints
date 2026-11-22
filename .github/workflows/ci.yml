@@ -16,7 +16,7 @@ concurrency:
 jobs:
   release-check:
     name: Every check a release must pass
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 45
     env:
       MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
@@ -25,10 +25,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Install the Java, Node and Python versions pinned in .mise.toml (jdx/mise-action v5.2.8)
-        uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785
+      - name: Install the Java, Node and Python versions pinned in .mise.toml (jdx/mise-action v5.3.0)
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78
         with:
-          version: 2026.11.8
+          version: 2026.11.12
       - name: Install the pinned lint tools
         run: "python3 -m pip install --require-hashes --only-binary :all: --requirement scripts/dev-requirements.txt"
       - name: Type check, lint, install the pinned runtime with the kit installer, test, contract, TLC, verify
@@ -36,13 +36,13 @@ jobs:
 
   debian-13-no-root:
     name: Install and test on Debian 13 as a user without root
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 45
     container:
       image: debian:13@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6
     env:
-      NODE_VERSION: 24.8.0
-      NODE_SHA256: 2598641d188b41793930917f1a99a81c9615856b4205d408a44ab676c1acbb3d
+      NODE_VERSION: 24.22.3
+      NODE_SHA256: 4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb
     steps:
       - name: As root, only this - the distribution's Python 3.13 with venv, tools to fetch Node, and an unprivileged user
         run: |
