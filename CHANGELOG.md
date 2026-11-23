@@ -2,6 +2,13 @@
 
 All notable changes to this module are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.1.1 - 2026-11-23
+
+### Changed
+
+- The vendored kit is the kit-v0.4.9 release. Every command accepts `--help` and answers with the same command listing as `commands`, without running the command.
+- TLC runs on Temurin 25.0.5.1+2.
+
 ## 0.1.0 - 2026-11-17
 
 ### Added
