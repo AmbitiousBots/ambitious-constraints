@@ -23,11 +23,12 @@ Then, in your clone:
 
 ```text
 mise trust && mise install
-python3 -m pip install --require-hashes --only-binary :all: -r scripts/dev-requirements.txt
-npm run runtime
+mise exec -- npm ci --strict-peer-deps
+mise exec -- python3 -m pip install --require-hashes --only-binary :all: -r scripts/dev-requirements.txt
+mise exec -- npm run runtime
 ```
 
-The second line installs the two lint tools, mypy and ruff, at pinned versions; use a virtual environment and set `PY` to its Python if you prefer. The third builds the module and installs it, with the pinned solver runtime, into `.build/home` through the kit installer in `vendor/`. It downloads the locked packages once. There is no `npm ci`: the repository has no Node dependencies.
+The npm lock pins the TypeScript 7 compiler, the TypeScript 6 API and dependency-cruiser for development. The Python lock pins mypy and Ruff. To use a virtual environment, set `PY` to its Python 3.13 executable and install the Python lock there. `npm run runtime` builds the module and installs the solver into `.build/home` using the vendored kit installer.
 
 ## Run the checks
 

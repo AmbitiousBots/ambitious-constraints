@@ -1,6 +1,6 @@
 {
   "name": "ambitious-constraints",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "node scripts/py.mjs scripts/build.py",
+    "release:build": "npm run build",
     "runtime": "node scripts/runtime.mjs",
     "lint": "node scripts/py.mjs scripts/check_comments.py . --exclude vendor --exclude .build --exclude dist && node scripts/py.mjs -m ruff check src tests scripts examples verify && node scripts/check-standalone.mjs",
     "typecheck": "node scripts/py.mjs -m mypy --config-file mypy.ini src scripts examples",
@@ -17,5 +18,10 @@
     "tlc": "node scripts/tlc.mjs",
     "verify": "node verify/run",
     "release:check": "node scripts/release-check.mjs"
+  },
+  "devDependencies": {
+    "@typescript/native": "npm:typescript@7.0.2",
+    "dependency-cruiser": "18.9.0",
+    "typescript": "npm:@typescript/typescript6@6.0.2"
   }
 }

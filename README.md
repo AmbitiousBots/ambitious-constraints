@@ -8,10 +8,10 @@ Part of [Ambitious](https://ambitiousbots.com). The shared [module contract](MOD
 
 ## Install
 
-A release has three files: `ambitious-constraints-0.1.1.pyz`, `ambitious-constraints-0.1.1.runtime.txt` (the runtime lock) and `SHA256SUMS`. The module needs Python 3.13. The runtime needs `python3 -m venv` to work (on Debian that is the `python3-venv` package) and, the first time, access to the Python package index.
+A release has three files: `ambitious-constraints-0.1.2.pyz`, `ambitious-constraints-0.1.2.runtime.txt` (the runtime lock) and `SHA256SUMS`. The module needs Python 3.13. The runtime needs `python3 -m venv` to work (on Debian that is the `python3-venv` package) and, the first time, access to the Python package index.
 
 ```sh
-node ambitious-install-0.4.9.mjs constraints 0.1.1 --kind pyz --runtime --from <release address or directory>
+node ambitious-install-0.4.9.mjs constraints 0.1.2 --kind pyz --runtime --from <release address or directory>
 python3 "$AMBITIOUS_HOME/bin/ambitious-constraints" selfcheck
 ```
 
