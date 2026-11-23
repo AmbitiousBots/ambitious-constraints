@@ -276,7 +276,7 @@ var systemTool = (program, args) => new Promise((resolve2, reject) => {
     else reject(new Error(String(stderr).trim().split("\n").slice(-3).join(" ") || error.message));
   });
 });
-var installRuntime = async ({ module, version, home, download, runTool, python = "python3" }) => {
+var installRuntime = async ({ module, version, home, download, runTool, python = "python3", pinned }) => {
   if (!isModuleName(module)) throw failure("E_USAGE", `"${module}" is not a module name.`, "Use the lower-case name after ambitious-, for example tasks.");
   if (!isSemver(version)) throw failure("E_USAGE", `"${version}" is not an exact version.`, "Name one exact semantic version, for example 0.3.1.");
   const root = refuseAgentData(home);
@@ -287,13 +287,20 @@ var installRuntime = async ({ module, version, home, download, runTool, python =
   refuseNonRegularFile(join3(bin, SUMS_FILE));
   const installedSums = parseSums(existsSync(join3(bin, SUMS_FILE)) ? readFileSync2(join3(bin, SUMS_FILE), "utf8") : "");
   const recorded = installedSums.get(lock);
-  if (recorded !== void 0 && markerMatches(join3(runtimes, recorded), recorded)) return outcome("unchanged", recorded);
+  if (recorded !== void 0 && (pinned === void 0 || pinned === recorded) && markerMatches(join3(runtimes, recorded), recorded)) return outcome("unchanged", recorded);
   const expected = parseSums(new TextDecoder().decode(await fetched2(download, SUMS_FILE))).get(lock);
   if (expected === void 0) {
     throw failure(
       "E_INSTALL_CHECKSUM",
       `The release's ${SUMS_FILE} has no line for ${lock}.`,
       "This release declares no pinned runtime, or the module name or version is wrong. Run the installer without --runtime, or check the release."
+    );
+  }
+  if (pinned !== void 0 && expected !== pinned) {
+    throw failure(
+      "E_INSTALL_CHECKSUM",
+      `The release's ${SUMS_FILE} lists SHA-256 ${expected} for ${lock}, but the pinned checksum is ${pinned}.`,
+      "The release and the pin disagree, so no runtime was built. Report it; do not edit the pin. Any existing runtime was left as it was."
     );
   }
   const bytes = await fetched2(download, lock);
@@ -385,7 +392,7 @@ var embedded = () => {
       "The module name, version and migrations are embedded when the binary is bundled. Build with bundleOptions() from @ambitious/kit/build/bundle-options and run the file in dist/."
     );
   }
-  return { module: "install", version: "0.4.0", migrations: define_AMBITIOUS_MIGRATIONS_default };
+  return { module: "install", version: "0.4.9", migrations: define_AMBITIOUS_MIGRATIONS_default };
 };
 
 // packages/kit/src/cli/install-main.ts

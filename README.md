@@ -8,10 +8,10 @@ Part of [Ambitious](https://ambitiousbots.com). The shared [module contract](MOD
 
 ## Install
 
-A release has three files: `ambitious-constraints-0.1.0.pyz`, `ambitious-constraints-0.1.0.runtime.txt` (the runtime lock) and `SHA256SUMS`. The module needs Python 3.13. The runtime needs `python3 -m venv` to work (on Debian that is the `python3-venv` package) and, the first time, access to the Python package index.
+A release has three files: `ambitious-constraints-0.1.1.pyz`, `ambitious-constraints-0.1.1.runtime.txt` (the runtime lock) and `SHA256SUMS`. The module needs Python 3.13. The runtime needs `python3 -m venv` to work (on Debian that is the `python3-venv` package) and, the first time, access to the Python package index.
 
 ```sh
-node ambitious-install-0.4.0.mjs constraints 0.1.0 --kind pyz --runtime --from <release address or directory>
+node ambitious-install-0.4.9.mjs constraints 0.1.1 --kind pyz --runtime --from <release address or directory>
 python3 "$AMBITIOUS_HOME/bin/ambitious-constraints" selfcheck
 ```
 
@@ -46,10 +46,10 @@ The first line installs the runtime into `.build/home`, where the tests look for
 ## JSON interface
 
 ```text
-ambitious-constraints <command> [--in input.json] [--db constraints.sqlite] [--now ISO8601] [--seed integer] [--json]
+ambitious-constraints <command> [--in input.json] [--db constraints.sqlite] [--now ISO8601] [--seed integer] [--json] [--help]
 ```
 
-Pass one JSON object on stdin or with `--in`, never both. Every response is one line, `{ ok, schemaVersion, module, command, data, errors, meta }`. Successful commands exit 0, caller errors exit 1, database and internal failures exit 2.
+Pass one JSON object on stdin or with `--in`, never both. Every response is one line, `{ ok, schemaVersion, module, command, data, errors, meta }`. Successful commands exit 0, caller errors exit 1, database and internal failures exit 2. `--help`, with or without a command name, answers with the same listing as `commands` and does not run the command.
 
 | Command | Access | Needs the runtime | Input | Result in `data` |
 |---|---|---|---|---|
