@@ -29,10 +29,22 @@ jobs:
         uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78
         with:
           version: 2026.11.12
+      - name: Check the TypeScript compilers, compiler API and dependency-cruiser
+        run: |
+          mise exec -- npm ci --strict-peer-deps
+          mise exec -- npx --no-install tsc --version | grep -Fx 'Version 7.0.2'
+          mise exec -- npx --no-install tsc6 --version | grep -E '^Version 6[.]0[.][0-9]+$'
+          mise exec -- node --input-type=commonjs <<'JS'
+          const assert = require("node:assert/strict");
+          const ts = require("typescript");
+          assert.match(ts.version, /^6\.0\./);
+          ts.createSourceFile("input.ts", "export {}", ts.ScriptTarget.Latest);
+          JS
+          mise exec -- npx --no-install depcruise --no-config --output-type json scripts/*.mjs > /dev/null
       - name: Install the pinned lint tools
-        run: "python3 -m pip install --require-hashes --only-binary :all: --requirement scripts/dev-requirements.txt"
+        run: "mise exec -- python3 -m pip install --require-hashes --only-binary :all: --requirement scripts/dev-requirements.txt"
       - name: Type check, lint, install the pinned runtime with the kit installer, test, contract, TLC, verify
-        run: npm run release:check
+        run: mise exec -- npm run release:check
 
   debian-13-no-root:
     name: Install and test on Debian 13 as a user without root
@@ -41,13 +53,14 @@ jobs:
     container:
       image: debian:13@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6
     env:
-      NODE_VERSION: 24.22.3
-      NODE_SHA256: 4f2b175a6d53a5c617a80dba2676238a0688cef28c6da4eba35c7d844e66fcfb
+      MISE_VERSION: 2026.11.12
+      MISE_SHA256: 9c12c24f5eac6b6357e5265e2629166cc3005459037f5d747680a99e375ff2ab
+      MISE_NODE_VERIFY: "true"
     steps:
-      - name: As root, only this - the distribution's Python 3.13 with venv, tools to fetch Node, and an unprivileged user
+      - name: Install download and checkout tools, then create the unprivileged user
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends python3 python3-venv ca-certificates curl xz-utils
+          apt-get install -y --no-install-recommends ca-certificates curl git xz-utils
           useradd --create-home box
       - name: Check out the repository (actions/checkout v7.0.1)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -55,37 +68,31 @@ jobs:
           persist-credentials: false
       - name: Hand the checkout to the unprivileged user
         run: chown -R box:box "$GITHUB_WORKSPACE"
-      - name: As the user, put Node 24 in the home directory and verify its checksum
+      - name: Install mise and the repository toolchain as the unprivileged user
         run: |
-          su box -c '
+          su box -s /bin/sh <<'CHECK'
             set -eu
-            cd "$HOME"
-            curl -sSfLO "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz"
-            echo "${NODE_SHA256}  node-v${NODE_VERSION}-linux-x64.tar.xz" | sha256sum -c -
-            tar -xJf "node-v${NODE_VERSION}-linux-x64.tar.xz"
-            ln -s "node-v${NODE_VERSION}-linux-x64" node
-          '
-      - name: As the user, install the module and its pinned runtime with the kit installer, then selfcheck
-        run: |
-          su box -c '
-            set -eu
-            export PATH="$HOME/node/bin:$PATH" AMBITIOUS_HOME="$HOME/ambitious"
             cd "$GITHUB_WORKSPACE"
+            mkdir -p "$HOME/.local/bin"
+            export PATH="$HOME/.local/bin:$PATH"
+            curl -fsSL "https://github.com/jdx/mise/releases/download/v${MISE_VERSION}/mise-v${MISE_VERSION}-linux-x64" -o "$HOME/.local/bin/mise"
+            echo "$MISE_SHA256  $HOME/.local/bin/mise" | sha256sum -c -
+            chmod +x "$HOME/.local/bin/mise"
+            mise trust && mise install
+          CHECK
+      - name: Install, selfcheck and run the release suite as the unprivileged user
+        run: |
+          su box -s /bin/sh <<'CHECK'
+            set -eu
+            cd "$GITHUB_WORKSPACE"
+            export PATH="$HOME/.local/bin:$PATH" AMBITIOUS_HOME="$HOME/ambitious"
             id
-            python3 --version
-            node --version
-            node scripts/runtime.mjs "$AMBITIOUS_HOME"
-            python3 "$AMBITIOUS_HOME/bin/ambitious-constraints" selfcheck
-            python3 "$AMBITIOUS_HOME/bin/ambitious-constraints" selfcheck | grep -q "\"state\":\"ready\""
-          '
-      - name: As the user, run the tests, the contract tests and the verification features
-        run: |
-          su box -c '
-            set -eu
-            export PATH="$HOME/node/bin:$PATH"
-            cd "$GITHUB_WORKSPACE"
-            node scripts/runtime.mjs
-            node scripts/py.mjs -m unittest discover -s tests -t .
-            node scripts/py.mjs -m ambitious_kit.contract dist/ambitious-constraints.pyz
-            node verify/run --only contract --only install-and-decide --only without-the-runtime --only write-rules --only analysis --only pricing-regression --only planning-regression --only checked-against-brute-force --only time-slots --only interchange-schemas
-          '
+            mise exec -- node --version
+            mise exec -- python3 --version
+            mise exec -- java --version
+            mise exec -- node scripts/runtime.mjs "$AMBITIOUS_HOME"
+            mise exec -- python3 "$AMBITIOUS_HOME/bin/ambitious-constraints" selfcheck > "$AMBITIOUS_HOME/selfcheck.json"
+            grep -q '"state":"ready"' "$AMBITIOUS_HOME/selfcheck.json"
+            mise exec -- python3 -m pip install --require-hashes --only-binary :all: -r scripts/dev-requirements.txt
+            mise exec -- npm run release:check
+          CHECK

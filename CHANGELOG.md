@@ -2,6 +2,14 @@
 
 All notable changes to this module are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.1.2 - 2026-11-23
+
+### Changed
+
+- The release checks verify the OR-Tools wheel's protobuf requirement and the installed solver dependencies.
+- The Debian 13 job runs the full release suite with Node 24.22.3, Python 3.13.18 and Temurin 25.0.5.1+2.
+- The development toolchain includes TypeScript 7.0.2, its 6.0 API compatibility package and dependency-cruiser 18.9.0.
+
 ## 0.1.1 - 2026-11-23
 
 ### Changed
